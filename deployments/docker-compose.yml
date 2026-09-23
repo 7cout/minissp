@@ -64,6 +64,9 @@ services:
     image: clickhouse/clickhouse-server:24.3-alpine
     container_name: minissp-clickhouse
     restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
     ports:
       - "8123:8123"
       - "9000:9000"
@@ -74,7 +77,7 @@ services:
         soft: 262144
         hard: 262144
     healthcheck:
-      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1", "--user", "${CLICKHOUSE_USER}", "--password", "${CLICKHOUSE_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
