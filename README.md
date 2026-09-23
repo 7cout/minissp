@@ -18,3 +18,4 @@ Kafka, ClickHouse, Docker, Kubernetes, Prometheus, Grafana.
 ## Документация
 
 - [Журнал решений (ADR)](docs/decisions/INDEX.md)
+- [Заметки](docs/notes/INDEX.md)
