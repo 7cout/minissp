@@ -6,7 +6,7 @@
 ## Инструменты
 
 - [DBeaver](dbeaver.md) — GUI для PostgreSQL и ClickHouse
-- [Kafka UI и CLI](kafka-tools.md) — работа с Kafka
+- [Kafka: UI и CLI](kafka-tools.md) — работа с Kafka
 - [Redis: GUI и CLI](redis-tools.md) — работа с Redis
 
 ## Инфраструктура
