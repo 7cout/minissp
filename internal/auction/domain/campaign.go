@@ -17,7 +17,7 @@ type Campaign struct {
 	GeoTarget       string
 }
 
-// Validate проверяет инварианты
+// Validate проверяет инварианты кампании
 func (c Campaign) Validate() error {
 	// Идентификация
 	if strings.TrimSpace(c.ID) == "" {
