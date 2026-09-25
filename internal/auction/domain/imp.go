@@ -25,7 +25,7 @@ func (i Imp) Validate() error {
 	if strings.TrimSpace(i.SlotID) == "" {
 		return errors.New("imp slot id is required")
 	}
-	if err := s.Banner.Validate(); err != nil {
+	if err := i.Banner.Validate(); err != nil {
 		return fmt.Errorf("slot banner: %w", err)
 	}
 	if i.BidFloor < 0 {
