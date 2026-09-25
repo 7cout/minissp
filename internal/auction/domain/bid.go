@@ -8,6 +8,8 @@ import (
 
 // Bid — ставка, которую биддер присылает в ответ на запрос аукциона.
 type Bid struct {
+	ID         string
+	ImpID      string
 	CampaignID string
 	CreativeID string
 	Price      int64
@@ -15,6 +17,12 @@ type Bid struct {
 
 // Validate проверяет инварианты ставки.
 func (b Bid) Validate() error {
+	if strings.TrimSpace(b.ID) == "" {
+		return errors.New("id is required")
+	}
+	if strings.TrimSpace(b.ImpID) == "" {
+		return errors.New("imp id is required")
+	}
 	if strings.TrimSpace(b.CampaignID) == "" {
 		return errors.New("bid campaign id is required")
 	}
