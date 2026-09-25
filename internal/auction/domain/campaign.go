@@ -8,17 +8,13 @@ import (
 
 // Campaign — рекламная кампания...
 type Campaign struct {
-	ID           string
-	AdvertiserID string
-	Name         string
-
+	ID              string
+	AdvertiserID    string
+	Name            string
 	BudgetTotal     int64
 	BudgetRemaining int64
 	BudgetReserved  int64
-
-	GeoTarget   string
-	CreativeURL string
-	ClickURL    string
+	GeoTarget       string
 }
 
 // Validate проверяет инварианты
@@ -52,12 +48,6 @@ func (c Campaign) Validate() error {
 	// Таргетинг и креатив
 	if err := validateGeoCode(c.GeoTarget); err != nil {
 		return fmt.Errorf("campaign geo target: %w", err)
-	}
-	if strings.TrimSpace(c.CreativeURL) == "" {
-		return errors.New("campaign creative url is required")
-	}
-	if strings.TrimSpace(c.ClickURL) == "" {
-		return errors.New("campaign click url is required")
 	}
 
 	return nil
