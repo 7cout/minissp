@@ -8,6 +8,7 @@
 - [DBeaver](dbeaver.md) — GUI для PostgreSQL и ClickHouse
 - [Kafka: UI и CLI](kafka-tools.md) — работа с Kafka
 - [Redis: GUI и CLI](redis-tools.md) — работа с Redis
+- [Taskfile and tools](taskfile-and-tools.md) — Taskfile, линтеры, форматтеры
 
 ## Инфраструктура
 
@@ -17,3 +18,8 @@
 ## Что-то ещё
 
 Когда появятся заметки про Go, gRPC, Prometheus — добавлю сюда.
+
+## Связанные разделы
+
+- [Архитектура](../architecture/INDEX.md) 
+- [Решения (ADR)](../decisions/INDEX.md) 
