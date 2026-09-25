@@ -1,0 +1,46 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck       # необработанные ошибки
+    - govet          # встроенный анализатор Go
+    - ineffassign    # неэффективные присваивания
+    - staticcheck    # глубокий статический анализ
+    - unused         # неиспользуемый код
+    - misspell       # опечатки в комментариях
+    - unconvert      # лишние преобразования типов
+    - bodyclose      # незакрытые HTTP-ответы
+    - gocyclo        # цикломатическая сложность
+    - revive         # стиль кода
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+
+  revive:
+    rules:
+      - name: exported
+        disabled: false
+
+formatters:
+  enable:
+    - gci
+    - gofumpt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/7cout/minissp)
+      custom-order: true
+    gofumpt:
+      module-path: github.com/7cout/minissp
+      extra-rules: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
