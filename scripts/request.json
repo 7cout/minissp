@@ -1,0 +1,10 @@
+{
+  "id": "req_1",
+  "user_id": "user_1",
+  "imp": {
+    "id": "imp_1",
+    "slot_id": "slot_1",
+    "banner": {"width": 320, "height": 50},
+    "bid_floor": "1000000"
+  }
+}

@@ -16,7 +16,8 @@
    `name=home_banner, width=320, height=50, geo=RU, min_price=10`.
 
 2. **Advertiser** регистрирует кампанию:
-   `name=Nike Summer, budget=10000, geo_target=RU`, привязывает рекламный контент.
+   - `name=Nike Summer, budget=10000, geo_target=RU`
+   - привязывает рекламные креативы `type=image, width=320, height=50, url=..., click_url=....`
 
 3. **Приложение Publisher'а** шлёт запрос: «дай рекламу для слота X, 
    geo=RU, user_id=u123».
@@ -24,6 +25,7 @@
 4. **Auction Service**:
    - достаёт слот из PostgreSQL (или Redis, если закэширован);
    - отбирает кампании с подходящим `geo_target` и `budget_remaining > 0`;
+   - для каждой кампании берёт её креативы и оставляет только те, у которых width и height совпадают со слотом;
    - параллельно опрашивает биддеров через gRPC
 
 5. **Second-price аукцион**:
@@ -66,6 +68,8 @@
 
 **campaigns**: `id, advertiser_id, name, budget_total, budget_remaining, 
 budget_reserved, geo_target, creative_url, click_url`
+
+**creatives**: id, campaign_id, type, width, height, url, click_url
 
 **platform_stats**: `id, revenue_total, commission_percent=20`
 

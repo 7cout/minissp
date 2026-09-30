@@ -10,6 +10,17 @@ tasks:
     cmds:
       - task --list
 
+  install:gcc:
+    desc: "Установить gcc для CGO (только Windows)"
+    platforms: [windows]
+    status:
+      - where gcc
+    preconditions:
+      - sh: where scoop
+        msg: "Scoop не установлен. См. https://scoop.sh"
+    cmds:
+      - scoop install gcc     
+
   format:
     desc: "Форматирует весь проект gofumpt + gci"
     cmds:
@@ -23,6 +34,9 @@ tasks:
 
   test:
     desc: "Запустить тесты с детектором гонок"
+    preconditions:
+      - sh: where gcc
+        msg: "gcc не найден. Установите: task install:gcc"
     cmds:
       - go test -race -count=1 ./...
 
