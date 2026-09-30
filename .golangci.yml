@@ -39,7 +39,8 @@ formatters:
       custom-order: true
     gofumpt:
       module-path: github.com/7cout/minissp
-      extra-rules: true
+      extra:
+        group-params: true
 
 issues:
   max-issues-per-linter: 0
