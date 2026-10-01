@@ -81,7 +81,12 @@ tasks:
     env:
       STORAGE: memory
     cmds:
-      - go run ./cmd/auction     
+      - go run ./cmd/auction
+
+  test:integration:
+    desc: "Интеграционные тесты"
+    cmds:
+      - go test -race -count=1 -tags=integration ./internal/auction/repository/postgres/...
 
   all:
     desc: "Полный цикл проверок: fmt - lint - test"
