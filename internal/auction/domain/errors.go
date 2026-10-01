@@ -21,4 +21,7 @@ var (
 
 	// ErrUnsupportedGeo — гео не поддерживается платформой.
 	ErrUnsupportedGeo = errors.New("unsupported geo")
+
+	// ErrInvalidID — ID не соответствует формату (например, не UUID).
+	ErrInvalidID = errors.New("invalid id format")
 )
