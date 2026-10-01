@@ -43,7 +43,8 @@ message BidResponse {
 // CommitRequest — подтверждение списания после impression.
 message CommitRequest {
   string auction_id = 1;
-  int64 price = 2;
+  string campaign_id = 2;
+  int64 price = 3;
 }
 
 message CommitResponse {
@@ -53,8 +54,9 @@ message CommitResponse {
 // RollbackRequest — отмена резерва.
 message RollbackRequest {
   string auction_id = 1;
+  string campaign_id = 2;
+  int64 price = 3;
 }
-
 message RollbackResponse {
   bool ok = 1;
 }

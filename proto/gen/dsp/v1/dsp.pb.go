@@ -196,7 +196,8 @@ func (x *BidResponse) GetPrice() int64 {
 type CommitRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AuctionId     string                 `protobuf:"bytes,1,opt,name=auction_id,json=auctionId,proto3" json:"auction_id,omitempty"`
-	Price         int64                  `protobuf:"varint,2,opt,name=price,proto3" json:"price,omitempty"`
+	CampaignId    string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	Price         int64                  `protobuf:"varint,3,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -234,6 +235,13 @@ func (*CommitRequest) Descriptor() ([]byte, []int) {
 func (x *CommitRequest) GetAuctionId() string {
 	if x != nil {
 		return x.AuctionId
+	}
+	return ""
+}
+
+func (x *CommitRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
 	}
 	return ""
 }
@@ -293,6 +301,8 @@ func (x *CommitResponse) GetOk() bool {
 type RollbackRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AuctionId     string                 `protobuf:"bytes,1,opt,name=auction_id,json=auctionId,proto3" json:"auction_id,omitempty"`
+	CampaignId    string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	Price         int64                  `protobuf:"varint,3,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -332,6 +342,20 @@ func (x *RollbackRequest) GetAuctionId() string {
 		return x.AuctionId
 	}
 	return ""
+}
+
+func (x *RollbackRequest) GetCampaignId() string {
+	if x != nil {
+		return x.CampaignId
+	}
+	return ""
+}
+
+func (x *RollbackRequest) GetPrice() int64 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
 }
 
 type RollbackResponse struct {
@@ -400,16 +424,21 @@ const file_proto_dsp_v1_dsp_proto_rawDesc = "" +
 	"campaignId\x12\x1f\n" +
 	"\vcreative_id\x18\x03 \x01(\tR\n" +
 	"creativeId\x12\x14\n" +
-	"\x05price\x18\x04 \x01(\x03R\x05price\"D\n" +
+	"\x05price\x18\x04 \x01(\x03R\x05price\"e\n" +
 	"\rCommitRequest\x12\x1d\n" +
 	"\n" +
-	"auction_id\x18\x01 \x01(\tR\tauctionId\x12\x14\n" +
-	"\x05price\x18\x02 \x01(\x03R\x05price\" \n" +
+	"auction_id\x18\x01 \x01(\tR\tauctionId\x12\x1f\n" +
+	"\vcampaign_id\x18\x02 \x01(\tR\n" +
+	"campaignId\x12\x14\n" +
+	"\x05price\x18\x03 \x01(\x03R\x05price\" \n" +
 	"\x0eCommitResponse\x12\x0e\n" +
-	"\x02ok\x18\x01 \x01(\bR\x02ok\"0\n" +
+	"\x02ok\x18\x01 \x01(\bR\x02ok\"g\n" +
 	"\x0fRollbackRequest\x12\x1d\n" +
 	"\n" +
-	"auction_id\x18\x01 \x01(\tR\tauctionId\"\"\n" +
+	"auction_id\x18\x01 \x01(\tR\tauctionId\x12\x1f\n" +
+	"\vcampaign_id\x18\x02 \x01(\tR\n" +
+	"campaignId\x12\x14\n" +
+	"\x05price\x18\x03 \x01(\x03R\x05price\"\"\n" +
 	"\x10RollbackResponse\x12\x0e\n" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok2\xb7\x01\n" +
 	"\n" +

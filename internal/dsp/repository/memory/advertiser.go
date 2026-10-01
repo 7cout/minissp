@@ -13,6 +13,7 @@ type AdvertiserRepo struct {
 	advertisers map[string]*domain.Advertiser
 }
 
+// NewAdvertiserRepo создаёт новый репозиторий рекламодателей.
 func NewAdvertiserRepo() *AdvertiserRepo {
 	return &AdvertiserRepo{
 		advertisers: make(map[string]*domain.Advertiser),
