@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-// Campaign — рекламная кампания...
+// Campaign — рекламная кампания. Описывает, какую рекламу
+// advertiser хочет показывать, с каким бюджетом и в каких гео.
 type Campaign struct {
 	ID              string
 	AdvertiserID    string
