@@ -40,19 +40,6 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Подключение к PostgreSQL
-	pool, err := db.NewPostgresPool(ctx, db.PostgresConfig{
-		Host:     os.Getenv("POSTGRES_HOST"),
-		Port:     os.Getenv("POSTGRES_PORT"),
-		User:     os.Getenv("POSTGRES_USER"),
-		Password: os.Getenv("POSTGRES_PASSWORD"),
-		Database: os.Getenv("POSTGRES_DB"),
-	})
-	if err != nil {
-		return err
-	}
-	defer pool.Close()
-
 	storage := os.Getenv("STORAGE")
 	if storage == "" {
 		storage = "postgres" // default
