@@ -2,10 +2,8 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/7cout/minissp/internal/auction/domain"
@@ -41,11 +39,10 @@ func (r *SlotRepo) Get(ctx context.Context, id string) (*domain.Slot, error) {
 		&s.Geo,
 		&s.MinPrice,
 	)
-
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, domain.ErrSlotNotFound
-	}
 	if err != nil {
+		if mapped := mapPgError(err, domain.ErrSlotNotFound); mapped != err {
+			return nil, mapped
+		}
 		return nil, fmt.Errorf("query slot %s: %w", id, err)
 	}
 
