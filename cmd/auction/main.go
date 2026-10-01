@@ -1,11 +1,9 @@
 // Command auction запускает gRPC-сервер аукциона.
-//
-// Использует in-memory репозитории и симуляторы биддеров —
-// чтобы запуститься без PostgreSQL, Redis и Kafka.
 package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -17,10 +15,11 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/7cout/minissp/internal/auction/bidder"
-	"github.com/7cout/minissp/internal/auction/domain"
 	"github.com/7cout/minissp/internal/auction/handler"
 	"github.com/7cout/minissp/internal/auction/repository/memory"
+	"github.com/7cout/minissp/internal/auction/repository/postgres"
 	"github.com/7cout/minissp/internal/auction/service"
+	"github.com/7cout/minissp/internal/db"
 	"github.com/7cout/minissp/internal/seed"
 	pb "github.com/7cout/minissp/proto/gen/auction/v1"
 )
@@ -38,38 +37,86 @@ func main() {
 }
 
 func run() error {
-	// Репозитории (in-memory).
-	slots := memory.NewSlotRepo()
-	campaigns := memory.NewCampaignRepo()
-	creatives := memory.NewCreativeRepo()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	seedData(slots, campaigns, creatives)
+	// Подключение к PostgreSQL
+	pool, err := db.NewPostgresPool(ctx, db.PostgresConfig{
+		Host:     os.Getenv("POSTGRES_HOST"),
+		Port:     os.Getenv("POSTGRES_PORT"),
+		User:     os.Getenv("POSTGRES_USER"),
+		Password: os.Getenv("POSTGRES_PASSWORD"),
+		Database: os.Getenv("POSTGRES_DB"),
+	})
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
 
+	storage := os.Getenv("STORAGE")
+	if storage == "" {
+		storage = "postgres" // default
+	}
+
+	var (
+		slots     service.SlotRepository
+		campaigns service.CampaignRepository
+		creatives service.CreativeRepository
+	)
+
+	switch storage {
+	case "memory":
+		memSlots := memory.NewSlotRepo()
+		memCamps := memory.NewCampaignRepo()
+		memCreatives := memory.NewCreativeRepo()
+		seed.PopulateMemory(memSlots, memCamps, memCreatives)
+		slots, campaigns, creatives = memSlots, memCamps, memCreatives
+		slog.Info("using in-memory storage")
+
+	case "postgres":
+		pool, err := db.NewPostgresPool(ctx, db.PostgresConfig{
+			Host:     os.Getenv("POSTGRES_HOST"),
+			Port:     os.Getenv("POSTGRES_PORT"),
+			User:     os.Getenv("POSTGRES_USER"),
+			Password: os.Getenv("POSTGRES_PASSWORD"),
+			Database: os.Getenv("POSTGRES_DB"),
+		})
+		if err != nil {
+			return err
+		}
+		defer pool.Close()
+
+		slots = postgres.NewSlotRepo(pool)
+		campaigns = postgres.NewCampaignRepo(pool)
+		creatives = postgres.NewCreativeRepo(pool)
+		slog.Info("using postgres storage")
+
+	default:
+		return fmt.Errorf("unknown STORAGE: %q", storage)
+	}
+
+	// Биддеры
 	bidders := []service.BidderClient{
 		bidder.NewSimulator(seed.CampaignNike, 1_000_000, 5_000_000),
 		bidder.NewSimulator(seed.CampaignAdidas, 1_000_000, 8_000_000),
 		bidder.NewSimulator(seed.CampaignPuma, 1_000_000, 12_000_000),
 	}
 
-	// Сервис аукциона.
+	// Сервис
 	svc := service.New(slots, campaigns, creatives, bidders)
 
-	// gRPC-сервер.
+	// gRPC
 	grpcServer := grpc.NewServer()
 	pb.RegisterAuctionServiceServer(grpcServer, handler.NewAuctionServer(svc))
-	reflection.Register(grpcServer) // для grpcurl
+	reflection.Register(grpcServer)
 
-	// Слушаем порт.
+	// Слушаем
 	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
 		return err
 	}
 
-	// Graceful shutdown по Ctrl+C
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	// 7. Запускаем сервер в горутине.
+	// Запуск
 	errCh := make(chan error, 1)
 	go func() {
 		slog.Info("gRPC server listening", "addr", grpcAddr)
@@ -78,7 +125,7 @@ func run() error {
 		}
 	}()
 
-	// Ждём сигнала или ошибки сервера
+	// Ждём
 	select {
 	case <-ctx.Done():
 		slog.Info("shutdown signal received")
@@ -86,7 +133,7 @@ func run() error {
 		return err
 	}
 
-	// Graceful shutdown: даём время завершить текущие запросы
+	// Graceful shutdown
 	done := make(chan struct{})
 	go func() {
 		grpcServer.GracefulStop()
@@ -102,54 +149,4 @@ func run() error {
 	}
 
 	return nil
-}
-
-// seedData наполняет репозитории тестовыми данными
-func seedData(
-	slots *memory.SlotRepo,
-	campaigns *memory.CampaignRepo,
-	creatives *memory.CreativeRepo,
-) {
-	// Слот.
-	slots.Add(&domain.Slot{
-		ID:          seed.SlotHomeBanner,
-		PublisherID: seed.PublisherT2,
-		Name:        "home_banner",
-		Banner:      domain.Banner{Width: 320, Height: 50},
-		Geo:         "RU",
-		MinPrice:    1_000_000,
-	})
-
-	// Кампании.
-	type camp struct {
-		id         string
-		advertiser string
-		creative   string
-		name       string
-	}
-	camps := []camp{
-		{seed.CampaignNike, seed.AdvertiserNike, seed.CreativeNike, "Nike Summer"},
-		{seed.CampaignAdidas, seed.AdvertiserAdidas, seed.CreativeAdidas, "Adidas Run"},
-		{seed.CampaignPuma, seed.AdvertiserPuma, seed.CreativePuma, "Puma Winter"},
-	}
-
-	for _, c := range camps {
-		campaigns.Add(&domain.Campaign{
-			ID:              c.id,
-			AdvertiserID:    c.advertiser,
-			Name:            c.name,
-			BudgetTotal:     100_000_000_000,
-			BudgetRemaining: 100_000_000_000,
-			BudgetReserved:  0,
-			GeoTarget:       "RU",
-		})
-
-		creatives.Add(&domain.Creative{
-			ID:         c.creative,
-			CampaignID: c.id,
-			Banner:     domain.Banner{Width: 320, Height: 50},
-			URL:        "https://cdn.example.com/" + c.name + ".jpg",
-			ClickURL:   "https://example.com/click_" + c.name,
-		})
-	}
 }

@@ -62,6 +62,27 @@ tasks:
     cmds:
       - goose -dir internal/db/migrations postgres "{{.DATABASE_URL}}" status
 
+  run:
+    desc: "Запустить сервер"
+    dotenv: [deployments/.env]
+    cmds:
+      - go run ./cmd/auction     
+
+  run:
+    desc: "Запустить сервер с PostgreSQL"
+    dotenv: [deployments/.env]
+    env:
+      STORAGE: postgres
+    cmds:
+      - go run ./cmd/auction
+
+  run:memory:
+    desc: "Запустить сервер с in-memory хранилищем"
+    env:
+      STORAGE: memory
+    cmds:
+      - go run ./cmd/auction     
+
   all:
     desc: "Полный цикл проверок: fmt - lint - test"
     cmds:
