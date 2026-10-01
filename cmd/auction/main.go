@@ -21,6 +21,7 @@ import (
 	"github.com/7cout/minissp/internal/auction/handler"
 	"github.com/7cout/minissp/internal/auction/repository/memory"
 	"github.com/7cout/minissp/internal/auction/service"
+	"github.com/7cout/minissp/internal/seed"
 	pb "github.com/7cout/minissp/proto/gen/auction/v1"
 )
 
@@ -44,11 +45,10 @@ func run() error {
 
 	seedData(slots, campaigns, creatives)
 
-	// Биддеры (симуляторы).
 	bidders := []service.BidderClient{
-		bidder.NewSimulator("camp_1", 1_000_000, 5_000_000),
-		bidder.NewSimulator("camp_2", 1_000_000, 8_000_000),
-		bidder.NewSimulator("camp_3", 1_000_000, 12_000_000),
+		bidder.NewSimulator(seed.CampaignNike, 1_000_000, 5_000_000),
+		bidder.NewSimulator(seed.CampaignAdidas, 1_000_000, 8_000_000),
+		bidder.NewSimulator(seed.CampaignPuma, 1_000_000, 12_000_000),
 	}
 
 	// Сервис аукциона.
@@ -110,37 +110,46 @@ func seedData(
 	campaigns *memory.CampaignRepo,
 	creatives *memory.CreativeRepo,
 ) {
-	// Слот
+	// Слот.
 	slots.Add(&domain.Slot{
-		ID:          "slot_1",
-		PublisherID: "pub_1",
+		ID:          seed.SlotHomeBanner,
+		PublisherID: seed.PublisherT2,
 		Name:        "home_banner",
 		Banner:      domain.Banner{Width: 320, Height: 50},
 		Geo:         "RU",
 		MinPrice:    1_000_000,
 	})
 
-	// Кампании
-	for i, id := range []string{"camp_1", "camp_2", "camp_3"} {
+	// Кампании.
+	type camp struct {
+		id         string
+		advertiser string
+		creative   string
+		name       string
+	}
+	camps := []camp{
+		{seed.CampaignNike, seed.AdvertiserNike, seed.CreativeNike, "Nike Summer"},
+		{seed.CampaignAdidas, seed.AdvertiserAdidas, seed.CreativeAdidas, "Adidas Run"},
+		{seed.CampaignPuma, seed.AdvertiserPuma, seed.CreativePuma, "Puma Winter"},
+	}
+
+	for _, c := range camps {
 		campaigns.Add(&domain.Campaign{
-			ID:              id,
-			AdvertiserID:    "adv_" + id,
-			Name:            "Test Campaign " + id,
+			ID:              c.id,
+			AdvertiserID:    c.advertiser,
+			Name:            c.name,
 			BudgetTotal:     100_000_000_000,
 			BudgetRemaining: 100_000_000_000,
 			BudgetReserved:  0,
 			GeoTarget:       "RU",
 		})
 
-		// Креатив для каждой кампании
 		creatives.Add(&domain.Creative{
-			ID:         "creative_" + id,
-			CampaignID: id,
+			ID:         c.creative,
+			CampaignID: c.id,
 			Banner:     domain.Banner{Width: 320, Height: 50},
-			URL:        "https://cdn.example.com/banner_" + id + ".jpg",
-			ClickURL:   "https://example.com/click_" + id,
+			URL:        "https://cdn.example.com/" + c.name + ".jpg",
+			ClickURL:   "https://example.com/click_" + c.name,
 		})
-
-		_ = i
 	}
 }
