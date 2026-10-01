@@ -18,4 +18,10 @@ var (
 
 	// ErrInvalidID — ID не соответствует формату.
 	ErrInvalidID = errors.New("invalid id format")
+
+	// ErrAdvertiserNotFound — рекламодатель с таким ID не найден.
+	ErrAdvertiserNotFound = errors.New("advertiser not found")
+
+	// ErrInsufficientBalance — на балансе рекламодателя не хватает денег.
+	ErrInsufficientBalance = errors.New("insufficient balance")
 )
