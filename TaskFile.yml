@@ -60,13 +60,7 @@ tasks:
   migrate:status:
     desc: "Показать статус миграций"
     cmds:
-      - goose -dir internal/db/migrations postgres "{{.DATABASE_URL}}" status
-
-  run:
-    desc: "Запустить сервер"
-    dotenv: [deployments/.env]
-    cmds:
-      - go run ./cmd/auction     
+      - goose -dir internal/db/migrations postgres "{{.DATABASE_URL}}" status  
 
   run:
     desc: "Запустить сервер с PostgreSQL"
