@@ -18,10 +18,10 @@ type Bid struct {
 // Validate проверяет инварианты ставки.
 func (b Bid) Validate() error {
 	if strings.TrimSpace(b.ID) == "" {
-		return errors.New("id is required")
+		return errors.New("bid id is required")
 	}
 	if strings.TrimSpace(b.ImpID) == "" {
-		return errors.New("imp id is required")
+		return errors.New("bid imp id is required")
 	}
 	if strings.TrimSpace(b.CampaignID) == "" {
 		return errors.New("bid campaign id is required")
