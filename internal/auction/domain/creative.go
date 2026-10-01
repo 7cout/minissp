@@ -6,14 +6,6 @@ import (
 	"strings"
 )
 
-// CreativeType тип рекламного материала
-type CreativeType string
-
-// Поддерживаемые типы креативов.
-const (
-	CreativeTypeImage CreativeType = "image"
-)
-
 // Creative рекламный материал. Картинка, видео,
 // текст, аудио, ссылка на сайт
 type Creative struct {
