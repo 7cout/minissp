@@ -26,7 +26,7 @@ func (i Imp) Validate() error {
 		return errors.New("imp slot id is required")
 	}
 	if err := i.Banner.Validate(); err != nil {
-		return fmt.Errorf("slot banner: %w", err)
+		return fmt.Errorf("imp banner: %w", err)
 	}
 	if i.BidFloor < 0 {
 		return fmt.Errorf("imp bid floor cannot be negative, got %d", i.BidFloor)
