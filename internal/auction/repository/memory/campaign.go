@@ -31,6 +31,8 @@ func (r *CampaignRepo) Add(c *domain.Campaign) {
 // Get возвращает кампанию по ID.
 //
 // Возвращает domain.ErrCampaignNotFound, если кампания не найдена.
+// Возвращает копию — вызывающий код не может изменить данные
+// в обход мьютекса.
 func (r *CampaignRepo) Get(_ context.Context, id string) (*domain.Campaign, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -39,7 +41,8 @@ func (r *CampaignRepo) Get(_ context.Context, id string) (*domain.Campaign, erro
 	if !ok {
 		return nil, domain.ErrCampaignNotFound
 	}
-	return c, nil
+	cp := *c
+	return &cp, nil
 }
 
 // ListByGeo возвращает кампании, подходящие по гео и имеющие бюджет

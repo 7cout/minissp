@@ -26,7 +26,10 @@ func (r *SlotRepo) Add(slot *domain.Slot) {
 }
 
 // Get возвращает слот по ID
-// Возвращает domain.ErrSlotNotFound, если слот не найден
+//
+// Возвращает domain.ErrSlotNotFound, если слот не найден.
+// Возвращает копию — вызывающий код не может изменить данные
+// в обход мьютекса.
 func (r *SlotRepo) Get(_ context.Context, id string) (*domain.Slot, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -35,5 +38,6 @@ func (r *SlotRepo) Get(_ context.Context, id string) (*domain.Slot, error) {
 	if !ok {
 		return nil, domain.ErrSlotNotFound
 	}
-	return slot, nil
+	cp := *slot
+	return &cp, nil
 }
