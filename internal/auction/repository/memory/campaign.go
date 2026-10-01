@@ -28,6 +28,20 @@ func (r *CampaignRepo) Add(c *domain.Campaign) {
 	r.campaigns[c.ID] = c
 }
 
+// Get возвращает кампанию по ID.
+//
+// Возвращает domain.ErrCampaignNotFound, если кампания не найдена.
+func (r *CampaignRepo) Get(_ context.Context, id string) (*domain.Campaign, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	c, ok := r.campaigns[id]
+	if !ok {
+		return nil, domain.ErrCampaignNotFound
+	}
+	return c, nil
+}
+
 // ListByGeo возвращает кампании, подходящие по гео и имеющие бюджет
 func (r *CampaignRepo) ListByGeo(_ context.Context, geo string) ([]domain.Campaign, error) {
 	r.mu.RLock()
@@ -60,11 +74,11 @@ func (r *CampaignRepo) Reserve(_ context.Context, campaignID string, amount int6
 		return domain.ErrCampaignNotFound
 	}
 
-	available := c.BudgetRemaining - c.BudgetReserved
-	if available < amount {
+	if c.BudgetRemaining < amount {
 		return domain.ErrInsufficientBudget
 	}
-
+	c.BudgetRemaining -= amount
 	c.BudgetReserved += amount
+
 	return nil
 }

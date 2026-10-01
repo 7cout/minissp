@@ -32,6 +32,8 @@ func (h *AuctionServer) RunAuction(
 	ctx context.Context,
 	req *pb.BidRequest,
 ) (*pb.BidResponse, error) {
+	attrs := []any{"request_id", req.GetId()}
+
 	// Транспортная валидация.
 	if req.GetId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
@@ -40,19 +42,21 @@ func (h *AuctionServer) RunAuction(
 		return nil, status.Error(codes.InvalidArgument, "imp is required")
 	}
 
-	// Конвертация protobuf → domain
+	// Конвертация в domain.
 	domainReq, err := toDomainRequest(req)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid request: %v", err)
 	}
 
+	attrs = append(attrs, "slot_id", domainReq.Imp.SlotID)
+
 	// Вызов сервиса.
 	result, err := h.service.RunAuction(ctx, domainReq)
 	if err != nil {
-		return nil, mapError(err)
+		return nil, toGRPCError(ctx, err, attrs...)
 	}
 
-	// Конвертация domain - protobuf
+	// Конвертация ответа.
 	return toProtoResponse(result), nil
 }
 
@@ -99,25 +103,5 @@ func toProtoResponse(result *domain.AuctionResult) *pb.BidResponse {
 		CampaignId: result.CampaignID,
 		CreativeId: result.CreativeID,
 		Price:      result.Price,
-	}
-}
-
-// mapError превращает доменные ошибки в gRPC-статусы
-func mapError(err error) error {
-	switch {
-	case errors.Is(err, domain.ErrSlotNotFound):
-		return status.Error(codes.NotFound, "slot not found")
-	case errors.Is(err, domain.ErrNoBids):
-		return status.Error(codes.NotFound, "no bids received")
-	case errors.Is(err, domain.ErrInsufficientBudget):
-		return status.Error(codes.FailedPrecondition, "insufficient budget")
-	case errors.Is(err, domain.ErrUnsupportedGeo):
-		return status.Error(codes.InvalidArgument, "unsupported geo")
-	case errors.Is(err, context.Canceled):
-		return status.Error(codes.Canceled, "request canceled")
-	case errors.Is(err, context.DeadlineExceeded):
-		return status.Error(codes.DeadlineExceeded, "request timeout")
-	default:
-		return status.Error(codes.Internal, "internal error")
 	}
 }

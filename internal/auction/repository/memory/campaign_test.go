@@ -152,4 +152,32 @@ func TestCampaignRepo_Reserve_Concurrent(t *testing.T) {
 			t.Errorf("succeeded = %d, want exactly 100", succeeded.Load())
 		}
 	})
+	t.Run("success — budget updated correctly", func(t *testing.T) {
+		repo := NewCampaignRepo()
+		repo.Add(&domain.Campaign{
+			ID:              "c1",
+			BudgetTotal:     1_000_000,
+			BudgetRemaining: 1_000_000,
+			BudgetReserved:  0,
+			// ...
+		})
+
+		err := repo.Reserve(context.Background(), "c1", 300_000)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Проверяем ПОБОЧНЫЙ ЭФФЕКТ.
+		c, _ := repo.Get(context.Background(), "c1") // или через метод
+		if c.BudgetRemaining != 700_000 {
+			t.Errorf("remaining = %d, want 700000", c.BudgetRemaining)
+		}
+		if c.BudgetReserved != 300_000 {
+			t.Errorf("reserved = %d, want 300000", c.BudgetReserved)
+		}
+		if c.BudgetRemaining+c.BudgetReserved != c.BudgetTotal {
+			t.Errorf("invariant violated: %d + %d != %d",
+				c.BudgetRemaining, c.BudgetReserved, c.BudgetTotal)
+		}
+	})
 }
