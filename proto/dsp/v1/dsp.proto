@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package dsp.v1;
+
+option go_package = "github.com/7cout/minissp/proto/gen/dsp/v1;dspv1";
+
+// DspService — эмулятор DSP (Demand-Side Platform).
+// Принимает запросы от SSP, делает ставки, управляет бюджетом.
+service DspService {
+  // GetBid запрашивает ставку у DSP для конкретного показа.
+  // Возвращает NOT_FOUND, если DSP не участвует.
+  rpc GetBid (BidRequest) returns (BidResponse);
+
+  // Commit подтверждает списание бюджета после показа.
+  // Идемпотентен: повторный вызов с тем же auction_id — no-op.
+  rpc Commit (CommitRequest) returns (CommitResponse);
+
+  // Rollback отменяет резерв, если показ не состоялся.
+  // Идемпотентен.
+  rpc Rollback (RollbackRequest) returns (RollbackResponse);
+}
+
+// BidRequest — контекст показа, который SSP передаёт DSP.
+message BidRequest {
+  string request_id = 1;   // ID запроса от Publisher
+  string imp_id = 2;       // ID показа
+  string slot_id = 3;      // ID слота в SSP
+  int32 width = 4;         // ширина слота
+  int32 height = 5;        // высота слота
+  string geo = 6;          // гео пользователя
+  int64 bid_floor = 7;     // минимальная цена в микроединицах
+  string user_id = 8;      // опционально
+}
+
+// BidResponse — ставка DSP.
+message BidResponse {
+  string bid_id = 1;       // ID ставки
+  string campaign_id = 2;  // какая кампания
+  string creative_id = 3;  // какой креатив
+  int64 price = 4;         // цена в микроединицах
+}
+
+// CommitRequest — подтверждение списания после impression.
+message CommitRequest {
+  string auction_id = 1;
+  int64 price = 2;
+}
+
+message CommitResponse {
+  bool ok = 1;
+}
+
+// RollbackRequest — отмена резерва.
+message RollbackRequest {
+  string auction_id = 1;
+}
+
+message RollbackResponse {
+  bool ok = 1;
+}
