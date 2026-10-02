@@ -62,20 +62,41 @@ tasks:
     cmds:
       - goose -dir internal/db/migrations postgres "{{.DATABASE_URL}}" status  
 
-  run:
-    desc: "Запустить сервер с PostgreSQL"
+    # --- SSP (пока работает через cmd/auction) ---
+
+  run:ssp:
+    desc: "Запустить SSP с in-memory хранилищем"
+    env:
+      STORAGE: memory
+    cmds:
+      - go run ./cmd/auction
+
+  run:ssp:postgres:
+    desc: "Запустить SSP с PostgreSQL"
     dotenv: [deployments/.env]
     env:
       STORAGE: postgres
     cmds:
       - go run ./cmd/auction
 
-  run:memory:
-    desc: "Запустить сервер с in-memory хранилищем"
+  # --- DSP (пока только in-memory, postgres позже) ---
+
+  run:dsp:
+    desc: "Запустить DSP с in-memory хранилищем"
     env:
-      STORAGE: memory
+      DSP_ADDR: ":50052"
+      DSP_BID_MULTIPLIER_PERCENT: "150"
     cmds:
-      - go run ./cmd/auction
+      - go run ./cmd/dsp
+
+  # --- Publisher (позже) ---
+
+  run:publisher:
+    desc: "Запустить Publisher"
+    env:
+      SSP_ADDR: "localhost:50051"
+    cmds:
+      - go run ./cmd/publisher
 
   test:integration:
     desc: "Интеграционные тесты"
