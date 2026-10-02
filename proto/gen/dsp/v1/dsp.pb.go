@@ -126,10 +126,12 @@ func (x *BidRequest) GetUserId() string {
 // BidResponse — ставка DSP.
 type BidResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	BidId         string                 `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`                // ID ставки
-	CampaignId    string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"` // какая кампания
-	CreativeId    string                 `protobuf:"bytes,3,opt,name=creative_id,json=creativeId,proto3" json:"creative_id,omitempty"` // какой креатив
-	Price         int64                  `protobuf:"varint,4,opt,name=price,proto3" json:"price,omitempty"`                            // цена в микроединицах
+	BidId         string                 `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`                   // ID ставки
+	CampaignId    string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`    // какая кампания
+	CreativeId    string                 `protobuf:"bytes,3,opt,name=creative_id,json=creativeId,proto3" json:"creative_id,omitempty"`    // какой креатив
+	CreativeUrl   string                 `protobuf:"bytes,4,opt,name=creative_url,json=creativeUrl,proto3" json:"creative_url,omitempty"` // URL креатива
+	ClickUrl      string                 `protobuf:"bytes,5,opt,name=click_url,json=clickUrl,proto3" json:"click_url,omitempty"`          // URL клика
+	Price         int64                  `protobuf:"varint,6,opt,name=price,proto3" json:"price,omitempty"`                               // цена в микроединицах
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -181,6 +183,20 @@ func (x *BidResponse) GetCampaignId() string {
 func (x *BidResponse) GetCreativeId() string {
 	if x != nil {
 		return x.CreativeId
+	}
+	return ""
+}
+
+func (x *BidResponse) GetCreativeUrl() string {
+	if x != nil {
+		return x.CreativeUrl
+	}
+	return ""
+}
+
+func (x *BidResponse) GetClickUrl() string {
+	if x != nil {
+		return x.ClickUrl
 	}
 	return ""
 }
@@ -417,14 +433,16 @@ const file_proto_dsp_v1_dsp_proto_rawDesc = "" +
 	"\x06height\x18\x05 \x01(\x05R\x06height\x12\x10\n" +
 	"\x03geo\x18\x06 \x01(\tR\x03geo\x12\x1b\n" +
 	"\tbid_floor\x18\a \x01(\x03R\bbidFloor\x12\x17\n" +
-	"\auser_id\x18\b \x01(\tR\x06userId\"|\n" +
+	"\auser_id\x18\b \x01(\tR\x06userId\"\xbc\x01\n" +
 	"\vBidResponse\x12\x15\n" +
 	"\x06bid_id\x18\x01 \x01(\tR\x05bidId\x12\x1f\n" +
 	"\vcampaign_id\x18\x02 \x01(\tR\n" +
 	"campaignId\x12\x1f\n" +
 	"\vcreative_id\x18\x03 \x01(\tR\n" +
-	"creativeId\x12\x14\n" +
-	"\x05price\x18\x04 \x01(\x03R\x05price\"e\n" +
+	"creativeId\x12!\n" +
+	"\fcreative_url\x18\x04 \x01(\tR\vcreativeUrl\x12\x1b\n" +
+	"\tclick_url\x18\x05 \x01(\tR\bclickUrl\x12\x14\n" +
+	"\x05price\x18\x06 \x01(\x03R\x05price\"e\n" +
 	"\rCommitRequest\x12\x1d\n" +
 	"\n" +
 	"auction_id\x18\x01 \x01(\tR\tauctionId\x12\x1f\n" +

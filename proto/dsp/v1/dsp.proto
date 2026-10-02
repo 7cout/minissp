@@ -37,7 +37,9 @@ message BidResponse {
   string bid_id = 1;       // ID ставки
   string campaign_id = 2;  // какая кампания
   string creative_id = 3;  // какой креатив
-  int64 price = 4;         // цена в микроединицах
+  string creative_url = 4;   // URL креатива
+  string click_url = 5;      // URL клика
+  int64 price = 6;         // цена в микроединицах
 }
 
 // CommitRequest — подтверждение списания после impression.
