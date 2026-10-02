@@ -119,9 +119,11 @@ func toDomainBidRequest(req *pb.BidRequest) (domain.BidRequest, error) {
 // toProtoBidResponse конвертирует domain-ставку в protobuf-ответ.
 func toProtoBidResponse(bid *domain.Bid) *pb.BidResponse {
 	return &pb.BidResponse{
-		BidId:      bid.ID,
-		CampaignId: bid.CampaignID,
-		CreativeId: bid.CreativeID,
-		Price:      bid.Price,
+		BidId:       bid.ID,
+		CampaignId:  bid.CampaignID,
+		CreativeId:  bid.CreativeID,
+		CreativeUrl: bid.CreativeURL,
+		ClickUrl:    bid.ClickURL,
+		Price:       bid.Price,
 	}
 }

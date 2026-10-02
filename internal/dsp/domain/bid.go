@@ -47,11 +47,13 @@ func (r BidRequest) Validate() error {
 
 // Bid — ставка DSP. Возвращается в ответ на BidRequest.
 type Bid struct {
-	ID         string // ID ставки
-	ImpID      string // ID показа
-	CampaignID string // какая кампания
-	CreativeID string // какой креатив
-	Price      int64  // цена в микроединицах
+	ID          string // ID ставки
+	ImpID       string // ID показа
+	CampaignID  string // какая кампания
+	CreativeID  string // какой креатив
+	CreativeURL string // URL креатива
+	ClickURL    string // URL клика
+	Price       int64  // цена в микроединицах
 }
 
 // Validate проверяет инварианты ставки.
@@ -70,6 +72,12 @@ func (b Bid) Validate() error {
 	}
 	if b.Price <= 0 {
 		return fmt.Errorf("bid price must be positive, got %d", b.Price)
+	}
+	if err := validateURL(b.CreativeURL); err != nil {
+		return fmt.Errorf("creative url: %w", err)
+	}
+	if err := validateURL(b.ClickURL); err != nil {
+		return fmt.Errorf("click url: %w", err)
 	}
 	return nil
 }

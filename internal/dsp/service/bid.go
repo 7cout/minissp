@@ -47,11 +47,13 @@ func (s *Service) GetBid(ctx context.Context, req domain.BidRequest) (*domain.Bi
 		}
 
 		return &domain.Bid{
-			ID:         uuid.NewString(),
-			ImpID:      req.ImpID,
-			CampaignID: campaign.ID,
-			CreativeID: creative.ID,
-			Price:      price,
+			ID:          uuid.NewString(),
+			ImpID:       req.ImpID,
+			CampaignID:  campaign.ID,
+			CreativeID:  creative.ID,
+			CreativeURL: creative.URL,
+			ClickURL:    creative.ClickURL,
+			Price:       price,
 		}, nil
 	}
 
