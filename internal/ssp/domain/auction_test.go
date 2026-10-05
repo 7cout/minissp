@@ -45,6 +45,7 @@ func TestAuctionRecord_Validate(t *testing.T) {
 		CreativeID:  "cr_1",
 		PublisherID: "pub_1",
 		SlotID:      "slot_1",
+		BidderID:    "nike",
 		Price:       1_500_000,
 		CreatedAt:   time.Now(),
 	}
@@ -61,6 +62,7 @@ func TestAuctionRecord_Validate(t *testing.T) {
 		{"empty publisher id", func(r *AuctionRecord) { r.PublisherID = "" }, true},
 		{"zero price", func(r *AuctionRecord) { r.Price = 0 }, true},
 		{"negative price", func(r *AuctionRecord) { r.Price = -1 }, true},
+		{"empty bidder id", func(r *AuctionRecord) { r.BidderID = "" }, true},
 	}
 
 	for _, tt := range tests {
