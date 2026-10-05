@@ -26,10 +26,18 @@ type Client struct {
 	client pb.DspServiceClient
 }
 
+// newClientWithConn — внутренний конструктор для тестов.
+// Позволяет подсунуть готовое соединение bufconn.
+func newClientWithConn(name, apiKey string, conn *grpc.ClientConn) *Client {
+	return &Client{
+		name:   name,
+		apiKey: apiKey,
+		conn:   conn,
+		client: pb.NewDspServiceClient(conn),
+	}
+}
+
 // NewClient создаёт gRPC-клиент к DSP по адресу.
-//
-// name — человеческое имя DSP, используется в логах и метриках.
-// apiKey — секрет, который DSP ожидает в metadata.
 func NewClient(name, addr, apiKey string) (*Client, error) {
 	conn, err := grpc.NewClient(
 		addr,
@@ -38,13 +46,7 @@ func NewClient(name, addr, apiKey string) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("dial dsp %s at %s: %w", name, addr, err)
 	}
-
-	return &Client{
-		name:   name,
-		apiKey: apiKey,
-		conn:   conn,
-		client: pb.NewDspServiceClient(conn),
-	}, nil
+	return newClientWithConn(name, apiKey, conn), nil
 }
 
 // Name возвращает имя DSP (для логов).
