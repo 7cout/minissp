@@ -22,24 +22,280 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// CreativeType — тип рекламного материала.
+type CreativeType int32
+
+const (
+	CreativeType_CREATIVE_TYPE_UNSPECIFIED CreativeType = 0
+	CreativeType_CREATIVE_TYPE_BANNER      CreativeType = 1
+	CreativeType_CREATIVE_TYPE_VIDEO       CreativeType = 2
+	CreativeType_CREATIVE_TYPE_NATIVE      CreativeType = 3
+	CreativeType_CREATIVE_TYPE_AUDIO       CreativeType = 4
+)
+
+// Enum value maps for CreativeType.
+var (
+	CreativeType_name = map[int32]string{
+		0: "CREATIVE_TYPE_UNSPECIFIED",
+		1: "CREATIVE_TYPE_BANNER",
+		2: "CREATIVE_TYPE_VIDEO",
+		3: "CREATIVE_TYPE_NATIVE",
+		4: "CREATIVE_TYPE_AUDIO",
+	}
+	CreativeType_value = map[string]int32{
+		"CREATIVE_TYPE_UNSPECIFIED": 0,
+		"CREATIVE_TYPE_BANNER":      1,
+		"CREATIVE_TYPE_VIDEO":       2,
+		"CREATIVE_TYPE_NATIVE":      3,
+		"CREATIVE_TYPE_AUDIO":       4,
+	}
+)
+
+func (x CreativeType) Enum() *CreativeType {
+	p := new(CreativeType)
+	*p = x
+	return p
+}
+
+func (x CreativeType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CreativeType) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_dsp_v1_dsp_proto_enumTypes[0].Descriptor()
+}
+
+func (CreativeType) Type() protoreflect.EnumType {
+	return &file_proto_dsp_v1_dsp_proto_enumTypes[0]
+}
+
+func (x CreativeType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CreativeType.Descriptor instead.
+func (CreativeType) EnumDescriptor() ([]byte, []int) {
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{0}
+}
+
+// Banner — параметры баннерного креатива.
+type Banner struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Width         int32                  `protobuf:"varint,1,opt,name=width,proto3" json:"width,omitempty"`
+	Height        int32                  `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Banner) Reset() {
+	*x = Banner{}
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Banner) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Banner) ProtoMessage() {}
+
+func (x *Banner) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Banner.ProtoReflect.Descriptor instead.
+func (*Banner) Descriptor() ([]byte, []int) {
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Banner) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *Banner) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+// Video — параметры видеокреатива.
+type Video struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Width         int32                  `protobuf:"varint,1,opt,name=width,proto3" json:"width,omitempty"`
+	Height        int32                  `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
+	Duration      int32                  `protobuf:"varint,3,opt,name=duration,proto3" json:"duration,omitempty"` // в секундах
+	Mimes         []string               `protobuf:"bytes,4,rep,name=mimes,proto3" json:"mimes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Video) Reset() {
+	*x = Video{}
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Video) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Video) ProtoMessage() {}
+
+func (x *Video) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Video.ProtoReflect.Descriptor instead.
+func (*Video) Descriptor() ([]byte, []int) {
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Video) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *Video) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *Video) GetDuration() int32 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+func (x *Video) GetMimes() []string {
+	if x != nil {
+		return x.Mimes
+	}
+	return nil
+}
+
+// Native — параметры нативного креатива (заглушка).
+type Native struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Native) Reset() {
+	*x = Native{}
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Native) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Native) ProtoMessage() {}
+
+func (x *Native) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Native.ProtoReflect.Descriptor instead.
+func (*Native) Descriptor() ([]byte, []int) {
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{2}
+}
+
+// Audio — параметры аудиокреатива (заглушка).
+type Audio struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Audio) Reset() {
+	*x = Audio{}
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Audio) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Audio) ProtoMessage() {}
+
+func (x *Audio) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Audio.ProtoReflect.Descriptor instead.
+func (*Audio) Descriptor() ([]byte, []int) {
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{3}
+}
+
 // BidRequest — контекст показа, который SSP передаёт DSP.
 type BidRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // ID запроса от Publisher
-	ImpId         string                 `protobuf:"bytes,2,opt,name=imp_id,json=impId,proto3" json:"imp_id,omitempty"`             // ID показа
-	SlotId        string                 `protobuf:"bytes,3,opt,name=slot_id,json=slotId,proto3" json:"slot_id,omitempty"`          // ID слота в SSP
-	Width         int32                  `protobuf:"varint,4,opt,name=width,proto3" json:"width,omitempty"`                         // ширина слота
-	Height        int32                  `protobuf:"varint,5,opt,name=height,proto3" json:"height,omitempty"`                       // высота слота
-	Geo           string                 `protobuf:"bytes,6,opt,name=geo,proto3" json:"geo,omitempty"`                              // гео пользователя
-	BidFloor      int64                  `protobuf:"varint,7,opt,name=bid_floor,json=bidFloor,proto3" json:"bid_floor,omitempty"`   // минимальная цена в микроединицах
-	UserId        string                 `protobuf:"bytes,8,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`          // опционально
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	RequestId string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	ImpId     string                 `protobuf:"bytes,2,opt,name=imp_id,json=impId,proto3" json:"imp_id,omitempty"`
+	SlotId    string                 `protobuf:"bytes,3,opt,name=slot_id,json=slotId,proto3" json:"slot_id,omitempty"`
+	Geo       string                 `protobuf:"bytes,4,opt,name=geo,proto3" json:"geo,omitempty"`
+	BidFloor  int64                  `protobuf:"varint,5,opt,name=bid_floor,json=bidFloor,proto3" json:"bid_floor,omitempty"` // минимальная цена в микроединицах
+	UserId    string                 `protobuf:"bytes,6,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`        // опционально
+	// Тип слота и его параметры.
+	Type          CreativeType `protobuf:"varint,7,opt,name=type,proto3,enum=dsp.v1.CreativeType" json:"type,omitempty"`
+	Banner        *Banner      `protobuf:"bytes,8,opt,name=banner,proto3" json:"banner,omitempty"`  // если type = BANNER
+	Video         *Video       `protobuf:"bytes,9,opt,name=video,proto3" json:"video,omitempty"`    // если type = VIDEO
+	Native        *Native      `protobuf:"bytes,10,opt,name=native,proto3" json:"native,omitempty"` // если type = NATIVE
+	Audio         *Audio       `protobuf:"bytes,11,opt,name=audio,proto3" json:"audio,omitempty"`   // если type = AUDIO
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BidRequest) Reset() {
 	*x = BidRequest{}
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[0]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -51,7 +307,7 @@ func (x *BidRequest) String() string {
 func (*BidRequest) ProtoMessage() {}
 
 func (x *BidRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[0]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -64,7 +320,7 @@ func (x *BidRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BidRequest.ProtoReflect.Descriptor instead.
 func (*BidRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{0}
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *BidRequest) GetRequestId() string {
@@ -88,20 +344,6 @@ func (x *BidRequest) GetSlotId() string {
 	return ""
 }
 
-func (x *BidRequest) GetWidth() int32 {
-	if x != nil {
-		return x.Width
-	}
-	return 0
-}
-
-func (x *BidRequest) GetHeight() int32 {
-	if x != nil {
-		return x.Height
-	}
-	return 0
-}
-
 func (x *BidRequest) GetGeo() string {
 	if x != nil {
 		return x.Geo
@@ -123,22 +365,57 @@ func (x *BidRequest) GetUserId() string {
 	return ""
 }
 
+func (x *BidRequest) GetType() CreativeType {
+	if x != nil {
+		return x.Type
+	}
+	return CreativeType_CREATIVE_TYPE_UNSPECIFIED
+}
+
+func (x *BidRequest) GetBanner() *Banner {
+	if x != nil {
+		return x.Banner
+	}
+	return nil
+}
+
+func (x *BidRequest) GetVideo() *Video {
+	if x != nil {
+		return x.Video
+	}
+	return nil
+}
+
+func (x *BidRequest) GetNative() *Native {
+	if x != nil {
+		return x.Native
+	}
+	return nil
+}
+
+func (x *BidRequest) GetAudio() *Audio {
+	if x != nil {
+		return x.Audio
+	}
+	return nil
+}
+
 // BidResponse — ставка DSP.
 type BidResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	BidId         string                 `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`                   // ID ставки
-	CampaignId    string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`    // какая кампания
-	CreativeId    string                 `protobuf:"bytes,3,opt,name=creative_id,json=creativeId,proto3" json:"creative_id,omitempty"`    // какой креатив
-	CreativeUrl   string                 `protobuf:"bytes,4,opt,name=creative_url,json=creativeUrl,proto3" json:"creative_url,omitempty"` // URL креатива
-	ClickUrl      string                 `protobuf:"bytes,5,opt,name=click_url,json=clickUrl,proto3" json:"click_url,omitempty"`          // URL клика
-	Price         int64                  `protobuf:"varint,6,opt,name=price,proto3" json:"price,omitempty"`                               // цена в микроединицах
+	BidId         string                 `protobuf:"bytes,1,opt,name=bid_id,json=bidId,proto3" json:"bid_id,omitempty"`
+	CampaignId    string                 `protobuf:"bytes,2,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	CreativeId    string                 `protobuf:"bytes,3,opt,name=creative_id,json=creativeId,proto3" json:"creative_id,omitempty"`
+	CreativeUrl   string                 `protobuf:"bytes,4,opt,name=creative_url,json=creativeUrl,proto3" json:"creative_url,omitempty"`
+	ClickUrl      string                 `protobuf:"bytes,5,opt,name=click_url,json=clickUrl,proto3" json:"click_url,omitempty"`
+	Price         int64                  `protobuf:"varint,6,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BidResponse) Reset() {
 	*x = BidResponse{}
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[1]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -150,7 +427,7 @@ func (x *BidResponse) String() string {
 func (*BidResponse) ProtoMessage() {}
 
 func (x *BidResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[1]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -163,7 +440,7 @@ func (x *BidResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BidResponse.ProtoReflect.Descriptor instead.
 func (*BidResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{1}
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *BidResponse) GetBidId() string {
@@ -208,7 +485,6 @@ func (x *BidResponse) GetPrice() int64 {
 	return 0
 }
 
-// CommitRequest — подтверждение списания после impression.
 type CommitRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AuctionId     string                 `protobuf:"bytes,1,opt,name=auction_id,json=auctionId,proto3" json:"auction_id,omitempty"`
@@ -220,7 +496,7 @@ type CommitRequest struct {
 
 func (x *CommitRequest) Reset() {
 	*x = CommitRequest{}
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[2]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -232,7 +508,7 @@ func (x *CommitRequest) String() string {
 func (*CommitRequest) ProtoMessage() {}
 
 func (x *CommitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[2]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -245,7 +521,7 @@ func (x *CommitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitRequest.ProtoReflect.Descriptor instead.
 func (*CommitRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{2}
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CommitRequest) GetAuctionId() string {
@@ -278,7 +554,7 @@ type CommitResponse struct {
 
 func (x *CommitResponse) Reset() {
 	*x = CommitResponse{}
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[3]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -290,7 +566,7 @@ func (x *CommitResponse) String() string {
 func (*CommitResponse) ProtoMessage() {}
 
 func (x *CommitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[3]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -303,7 +579,7 @@ func (x *CommitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitResponse.ProtoReflect.Descriptor instead.
 func (*CommitResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{3}
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CommitResponse) GetOk() bool {
@@ -313,7 +589,6 @@ func (x *CommitResponse) GetOk() bool {
 	return false
 }
 
-// RollbackRequest — отмена резерва.
 type RollbackRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AuctionId     string                 `protobuf:"bytes,1,opt,name=auction_id,json=auctionId,proto3" json:"auction_id,omitempty"`
@@ -325,7 +600,7 @@ type RollbackRequest struct {
 
 func (x *RollbackRequest) Reset() {
 	*x = RollbackRequest{}
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[4]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -337,7 +612,7 @@ func (x *RollbackRequest) String() string {
 func (*RollbackRequest) ProtoMessage() {}
 
 func (x *RollbackRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[4]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -350,7 +625,7 @@ func (x *RollbackRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RollbackRequest.ProtoReflect.Descriptor instead.
 func (*RollbackRequest) Descriptor() ([]byte, []int) {
-	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{4}
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RollbackRequest) GetAuctionId() string {
@@ -383,7 +658,7 @@ type RollbackResponse struct {
 
 func (x *RollbackResponse) Reset() {
 	*x = RollbackResponse{}
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[5]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -395,7 +670,7 @@ func (x *RollbackResponse) String() string {
 func (*RollbackResponse) ProtoMessage() {}
 
 func (x *RollbackResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[5]
+	mi := &file_proto_dsp_v1_dsp_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -408,7 +683,7 @@ func (x *RollbackResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RollbackResponse.ProtoReflect.Descriptor instead.
 func (*RollbackResponse) Descriptor() ([]byte, []int) {
-	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{5}
+	return file_proto_dsp_v1_dsp_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RollbackResponse) GetOk() bool {
@@ -422,18 +697,32 @@ var File_proto_dsp_v1_dsp_proto protoreflect.FileDescriptor
 
 const file_proto_dsp_v1_dsp_proto_rawDesc = "" +
 	"\n" +
-	"\x16proto/dsp/v1/dsp.proto\x12\x06dsp.v1\"\xd1\x01\n" +
+	"\x16proto/dsp/v1/dsp.proto\x12\x06dsp.v1\"6\n" +
+	"\x06Banner\x12\x14\n" +
+	"\x05width\x18\x01 \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\x02 \x01(\x05R\x06height\"g\n" +
+	"\x05Video\x12\x14\n" +
+	"\x05width\x18\x01 \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\x02 \x01(\x05R\x06height\x12\x1a\n" +
+	"\bduration\x18\x03 \x01(\x05R\bduration\x12\x14\n" +
+	"\x05mimes\x18\x04 \x03(\tR\x05mimes\"\b\n" +
+	"\x06Native\"\a\n" +
+	"\x05Audio\"\xe7\x02\n" +
 	"\n" +
 	"BidRequest\x12\x1d\n" +
 	"\n" +
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x15\n" +
 	"\x06imp_id\x18\x02 \x01(\tR\x05impId\x12\x17\n" +
-	"\aslot_id\x18\x03 \x01(\tR\x06slotId\x12\x14\n" +
-	"\x05width\x18\x04 \x01(\x05R\x05width\x12\x16\n" +
-	"\x06height\x18\x05 \x01(\x05R\x06height\x12\x10\n" +
-	"\x03geo\x18\x06 \x01(\tR\x03geo\x12\x1b\n" +
-	"\tbid_floor\x18\a \x01(\x03R\bbidFloor\x12\x17\n" +
-	"\auser_id\x18\b \x01(\tR\x06userId\"\xbc\x01\n" +
+	"\aslot_id\x18\x03 \x01(\tR\x06slotId\x12\x10\n" +
+	"\x03geo\x18\x04 \x01(\tR\x03geo\x12\x1b\n" +
+	"\tbid_floor\x18\x05 \x01(\x03R\bbidFloor\x12\x17\n" +
+	"\auser_id\x18\x06 \x01(\tR\x06userId\x12(\n" +
+	"\x04type\x18\a \x01(\x0e2\x14.dsp.v1.CreativeTypeR\x04type\x12&\n" +
+	"\x06banner\x18\b \x01(\v2\x0e.dsp.v1.BannerR\x06banner\x12#\n" +
+	"\x05video\x18\t \x01(\v2\r.dsp.v1.VideoR\x05video\x12&\n" +
+	"\x06native\x18\n" +
+	" \x01(\v2\x0e.dsp.v1.NativeR\x06native\x12#\n" +
+	"\x05audio\x18\v \x01(\v2\r.dsp.v1.AudioR\x05audio\"\xbc\x01\n" +
 	"\vBidResponse\x12\x15\n" +
 	"\x06bid_id\x18\x01 \x01(\tR\x05bidId\x12\x1f\n" +
 	"\vcampaign_id\x18\x02 \x01(\tR\n" +
@@ -458,7 +747,13 @@ const file_proto_dsp_v1_dsp_proto_rawDesc = "" +
 	"campaignId\x12\x14\n" +
 	"\x05price\x18\x03 \x01(\x03R\x05price\"\"\n" +
 	"\x10RollbackResponse\x12\x0e\n" +
-	"\x02ok\x18\x01 \x01(\bR\x02ok2\xb7\x01\n" +
+	"\x02ok\x18\x01 \x01(\bR\x02ok*\x93\x01\n" +
+	"\fCreativeType\x12\x1d\n" +
+	"\x19CREATIVE_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14CREATIVE_TYPE_BANNER\x10\x01\x12\x17\n" +
+	"\x13CREATIVE_TYPE_VIDEO\x10\x02\x12\x18\n" +
+	"\x14CREATIVE_TYPE_NATIVE\x10\x03\x12\x17\n" +
+	"\x13CREATIVE_TYPE_AUDIO\x10\x042\xb7\x01\n" +
 	"\n" +
 	"DspService\x121\n" +
 	"\x06GetBid\x12\x12.dsp.v1.BidRequest\x1a\x13.dsp.v1.BidResponse\x127\n" +
@@ -477,27 +772,38 @@ func file_proto_dsp_v1_dsp_proto_rawDescGZIP() []byte {
 	return file_proto_dsp_v1_dsp_proto_rawDescData
 }
 
-var file_proto_dsp_v1_dsp_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_proto_dsp_v1_dsp_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_dsp_v1_dsp_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_proto_dsp_v1_dsp_proto_goTypes = []any{
-	(*BidRequest)(nil),       // 0: dsp.v1.BidRequest
-	(*BidResponse)(nil),      // 1: dsp.v1.BidResponse
-	(*CommitRequest)(nil),    // 2: dsp.v1.CommitRequest
-	(*CommitResponse)(nil),   // 3: dsp.v1.CommitResponse
-	(*RollbackRequest)(nil),  // 4: dsp.v1.RollbackRequest
-	(*RollbackResponse)(nil), // 5: dsp.v1.RollbackResponse
+	(CreativeType)(0),        // 0: dsp.v1.CreativeType
+	(*Banner)(nil),           // 1: dsp.v1.Banner
+	(*Video)(nil),            // 2: dsp.v1.Video
+	(*Native)(nil),           // 3: dsp.v1.Native
+	(*Audio)(nil),            // 4: dsp.v1.Audio
+	(*BidRequest)(nil),       // 5: dsp.v1.BidRequest
+	(*BidResponse)(nil),      // 6: dsp.v1.BidResponse
+	(*CommitRequest)(nil),    // 7: dsp.v1.CommitRequest
+	(*CommitResponse)(nil),   // 8: dsp.v1.CommitResponse
+	(*RollbackRequest)(nil),  // 9: dsp.v1.RollbackRequest
+	(*RollbackResponse)(nil), // 10: dsp.v1.RollbackResponse
 }
 var file_proto_dsp_v1_dsp_proto_depIdxs = []int32{
-	0, // 0: dsp.v1.DspService.GetBid:input_type -> dsp.v1.BidRequest
-	2, // 1: dsp.v1.DspService.Commit:input_type -> dsp.v1.CommitRequest
-	4, // 2: dsp.v1.DspService.Rollback:input_type -> dsp.v1.RollbackRequest
-	1, // 3: dsp.v1.DspService.GetBid:output_type -> dsp.v1.BidResponse
-	3, // 4: dsp.v1.DspService.Commit:output_type -> dsp.v1.CommitResponse
-	5, // 5: dsp.v1.DspService.Rollback:output_type -> dsp.v1.RollbackResponse
-	3, // [3:6] is the sub-list for method output_type
-	0, // [0:3] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: dsp.v1.BidRequest.type:type_name -> dsp.v1.CreativeType
+	1,  // 1: dsp.v1.BidRequest.banner:type_name -> dsp.v1.Banner
+	2,  // 2: dsp.v1.BidRequest.video:type_name -> dsp.v1.Video
+	3,  // 3: dsp.v1.BidRequest.native:type_name -> dsp.v1.Native
+	4,  // 4: dsp.v1.BidRequest.audio:type_name -> dsp.v1.Audio
+	5,  // 5: dsp.v1.DspService.GetBid:input_type -> dsp.v1.BidRequest
+	7,  // 6: dsp.v1.DspService.Commit:input_type -> dsp.v1.CommitRequest
+	9,  // 7: dsp.v1.DspService.Rollback:input_type -> dsp.v1.RollbackRequest
+	6,  // 8: dsp.v1.DspService.GetBid:output_type -> dsp.v1.BidResponse
+	8,  // 9: dsp.v1.DspService.Commit:output_type -> dsp.v1.CommitResponse
+	10, // 10: dsp.v1.DspService.Rollback:output_type -> dsp.v1.RollbackResponse
+	8,  // [8:11] is the sub-list for method output_type
+	5,  // [5:8] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_proto_dsp_v1_dsp_proto_init() }
@@ -510,13 +816,14 @@ func file_proto_dsp_v1_dsp_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_dsp_v1_dsp_proto_rawDesc), len(file_proto_dsp_v1_dsp_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   6,
+			NumEnums:      1,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_proto_dsp_v1_dsp_proto_goTypes,
 		DependencyIndexes: file_proto_dsp_v1_dsp_proto_depIdxs,
+		EnumInfos:         file_proto_dsp_v1_dsp_proto_enumTypes,
 		MessageInfos:      file_proto_dsp_v1_dsp_proto_msgTypes,
 	}.Build()
 	File_proto_dsp_v1_dsp_proto = out.File

@@ -33,13 +33,10 @@ const (
 // Принимает запросы от SSP, делает ставки, управляет бюджетом.
 type DspServiceClient interface {
 	// GetBid запрашивает ставку у DSP для конкретного показа.
-	// Возвращает NOT_FOUND, если DSP не участвует.
 	GetBid(ctx context.Context, in *BidRequest, opts ...grpc.CallOption) (*BidResponse, error)
 	// Commit подтверждает списание бюджета после показа.
-	// Идемпотентен: повторный вызов с тем же auction_id — no-op.
 	Commit(ctx context.Context, in *CommitRequest, opts ...grpc.CallOption) (*CommitResponse, error)
-	// Rollback отменяет резерв, если показ не состоялся.
-	// Идемпотентен.
+	// Rollback отменяет резерв.
 	Rollback(ctx context.Context, in *RollbackRequest, opts ...grpc.CallOption) (*RollbackResponse, error)
 }
 
@@ -89,13 +86,10 @@ func (c *dspServiceClient) Rollback(ctx context.Context, in *RollbackRequest, op
 // Принимает запросы от SSP, делает ставки, управляет бюджетом.
 type DspServiceServer interface {
 	// GetBid запрашивает ставку у DSP для конкретного показа.
-	// Возвращает NOT_FOUND, если DSP не участвует.
 	GetBid(context.Context, *BidRequest) (*BidResponse, error)
 	// Commit подтверждает списание бюджета после показа.
-	// Идемпотентен: повторный вызов с тем же auction_id — no-op.
 	Commit(context.Context, *CommitRequest) (*CommitResponse, error)
-	// Rollback отменяет резерв, если показ не состоялся.
-	// Идемпотентен.
+	// Rollback отменяет резерв.
 	Rollback(context.Context, *RollbackRequest) (*RollbackResponse, error)
 	mustEmbedUnimplementedDspServiceServer()
 }
