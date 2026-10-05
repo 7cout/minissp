@@ -58,17 +58,20 @@
 | 01 | OK, BidResponse с campaign_id=Nike |
 | 02 | InvalidArgument: request_id is required |
 | 03 | InvalidArgument: imp id is required |
-| 04 | InvalidArgument: width must be positive |
+| 04 | InvalidArgument: banner width must be positive |
 | 05 | InvalidArgument: geo |
 | 06 | NotFound: no eligible campaign |
 | 07 | NotFound: no eligible campaign |
 | 08 | NotFound: no eligible campaign |
-| 09 | OK, ok=true |
+| 08a | InvalidArgument: banner type requires banner params |
+| 08b | NotFound: no eligible campaign (видео-тип валиден, но кампаний нет) |
+| 08c | InvalidArgument: unsupported creative type |
+| 09 | OK, ok=true (требует GetBid 01) |
 | 10 | InvalidArgument: campaign_id is required |
 | 11 | InvalidArgument: price must be positive |
 | 12 | NotFound: campaign not found |
 | 13 | FailedPrecondition: insufficient budget |
-| 14 | OK, ok=true |
+| 14 | OK, ok=true (требует GetBid 01) |
 | 15 | InvalidArgument: campaign_id is required |
 | 16 | NotFound: campaign not found |
 | 17 | FailedPrecondition: insufficient budget |

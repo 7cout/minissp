@@ -88,13 +88,29 @@ func (s *Service) findMatchingCreative(
 	return nil, nil
 }
 
-// fitsSlot проверяет, что креатив подходит слоту по размеру и типу.
+// fitsSlot проверяет, что креатив подходит слоту по типу и параметрам.
 func fitsSlot(c domain.Creative, req domain.BidRequest) bool {
-	if c.Type != domain.CreativeTypeBanner {
+	if c.Type != req.Type {
 		return false
 	}
-	if c.Banner == nil {
+
+	switch req.Type {
+	case domain.CreativeTypeBanner:
+		if c.Banner == nil || req.Banner == nil {
+			return false
+		}
+		return c.Banner.Width == req.Banner.Width &&
+			c.Banner.Height == req.Banner.Height
+
+	case domain.CreativeTypeVideo:
+		if c.Video == nil || req.Video == nil {
+			return false
+		}
+		return c.Video.Width == req.Video.Width &&
+			c.Video.Height == req.Video.Height
+
+	// native и audio — заглушки, всегда false
+	default:
 		return false
 	}
-	return c.Banner.Width == int(req.Width) && c.Banner.Height == int(req.Height)
 }

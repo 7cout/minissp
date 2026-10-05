@@ -4,9 +4,9 @@
   "slot_id": "slot_1",
   "geo": "RU",
   "bid_floor": "1000000",
-  "type": "CREATIVE_TYPE_BANNER",
+  "type": "CREATIVE_TYPE_UNSPECIFIED",
   "banner": {
-    "width": 640,
-    "height": 100
+    "width": 320,
+    "height": 50
   }
 }

@@ -98,22 +98,76 @@ func (h *DspServer) Rollback(
 	return &pb.RollbackResponse{Ok: true}, nil
 }
 
-// toDomainBidRequest конвертирует protobuf-запрос в domain-структуру.
 func toDomainBidRequest(req *pb.BidRequest) (domain.BidRequest, error) {
 	domainReq := domain.BidRequest{
 		RequestID: req.GetRequestId(),
 		ImpID:     req.GetImpId(),
 		SlotID:    req.GetSlotId(),
-		Width:     req.GetWidth(),
-		Height:    req.GetHeight(),
 		Geo:       req.GetGeo(),
 		BidFloor:  req.GetBidFloor(),
 		UserID:    req.GetUserId(),
+		Type:      toDomainCreativeType(req.GetType()),
+		Banner:    toDomainBanner(req.GetBanner()),
+		Video:     toDomainVideo(req.GetVideo()),
+		Native:    toDomainNative(req.GetNative()),
+		Audio:     toDomainAudio(req.GetAudio()),
 	}
+
 	if err := domainReq.Validate(); err != nil {
 		return domain.BidRequest{}, err
 	}
 	return domainReq, nil
+}
+
+func toDomainCreativeType(t pb.CreativeType) domain.CreativeType {
+	switch t {
+	case pb.CreativeType_CREATIVE_TYPE_BANNER:
+		return domain.CreativeTypeBanner
+	case pb.CreativeType_CREATIVE_TYPE_VIDEO:
+		return domain.CreativeTypeVideo
+	case pb.CreativeType_CREATIVE_TYPE_NATIVE:
+		return domain.CreativeTypeNative
+	case pb.CreativeType_CREATIVE_TYPE_AUDIO:
+		return domain.CreativeTypeAudio
+	default:
+		return ""
+	}
+}
+
+func toDomainBanner(b *pb.Banner) *domain.Banner {
+	if b == nil {
+		return nil
+	}
+	return &domain.Banner{
+		Width:  int(b.GetWidth()),
+		Height: int(b.GetHeight()),
+	}
+}
+
+func toDomainVideo(v *pb.Video) *domain.Video {
+	if v == nil {
+		return nil
+	}
+	return &domain.Video{
+		Width:    int(v.GetWidth()),
+		Height:   int(v.GetHeight()),
+		Duration: int(v.GetDuration()),
+		MIMEs:    v.GetMimes(),
+	}
+}
+
+func toDomainNative(n *pb.Native) *domain.Native {
+	if n == nil {
+		return nil
+	}
+	return &domain.Native{}
+}
+
+func toDomainAudio(a *pb.Audio) *domain.Audio {
+	if a == nil {
+		return nil
+	}
+	return &domain.Audio{}
 }
 
 // toProtoBidResponse конвертирует domain-ставку в protobuf-ответ.

@@ -54,11 +54,11 @@ func validProtoBidRequest() *pb.BidRequest {
 		RequestId: "req_1",
 		ImpId:     "imp_1",
 		SlotId:    "slot_1",
-		Width:     320,
-		Height:    50,
 		Geo:       "RU",
 		BidFloor:  1_000_000,
 		UserId:    "user_1",
+		Type:      pb.CreativeType_CREATIVE_TYPE_BANNER,
+		Banner:    &pb.Banner{Width: 320, Height: 50},
 	}
 }
 
@@ -68,11 +68,13 @@ func TestDspServer_GetBid(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		svc := &fakeService{
 			bid: &domain.Bid{
-				ID:         "bid_1",
-				ImpID:      "imp_1",
-				CampaignID: "camp_1",
-				CreativeID: "cr_1",
-				Price:      1_500_000,
+				ID:          "bid_1",
+				ImpID:       "imp_1",
+				CampaignID:  "camp_1",
+				CreativeID:  "cr_1",
+				CreativeURL: "https://cdn.example.com/a.jpg",
+				ClickURL:    "https://example.com/click",
+				Price:       1_500_000,
 			},
 		}
 		srv := NewDspServer(svc)
@@ -91,6 +93,12 @@ func TestDspServer_GetBid(t *testing.T) {
 		if resp.GetCreativeId() != "cr_1" {
 			t.Errorf("creative_id = %q, want cr_1", resp.GetCreativeId())
 		}
+		if resp.GetCreativeUrl() != "https://cdn.example.com/a.jpg" {
+			t.Errorf("creative_url = %q", resp.GetCreativeUrl())
+		}
+		if resp.GetClickUrl() != "https://example.com/click" {
+			t.Errorf("click_url = %q", resp.GetClickUrl())
+		}
 		if resp.GetPrice() != 1_500_000 {
 			t.Errorf("price = %d, want 1500000", resp.GetPrice())
 		}
@@ -98,7 +106,15 @@ func TestDspServer_GetBid(t *testing.T) {
 
 	t.Run("converts pb request to domain correctly", func(t *testing.T) {
 		svc := &fakeService{
-			bid: &domain.Bid{ID: "bid_1", ImpID: "imp_1", CampaignID: "camp_1", CreativeID: "cr_1", Price: 1},
+			bid: &domain.Bid{
+				ID:          "bid_1",
+				ImpID:       "imp_1",
+				CampaignID:  "camp_1",
+				CreativeID:  "cr_1",
+				CreativeURL: "https://x.com/a.jpg",
+				ClickURL:    "https://x.com/c",
+				Price:       1,
+			},
 		}
 		srv := NewDspServer(svc)
 
@@ -117,11 +133,17 @@ func TestDspServer_GetBid(t *testing.T) {
 		if got.SlotID != "slot_1" {
 			t.Errorf("slot_id = %q, want slot_1", got.SlotID)
 		}
-		if got.Width != 320 {
-			t.Errorf("width = %d, want 320", got.Width)
+		if got.Type != domain.CreativeTypeBanner {
+			t.Errorf("type = %q, want banner", got.Type)
 		}
-		if got.Height != 50 {
-			t.Errorf("height = %d, want 50", got.Height)
+		if got.Banner == nil {
+			t.Fatal("banner is nil")
+		}
+		if got.Banner.Width != 320 {
+			t.Errorf("banner width = %d, want 320", got.Banner.Width)
+		}
+		if got.Banner.Height != 50 {
+			t.Errorf("banner height = %d, want 50", got.Banner.Height)
 		}
 		if got.Geo != "RU" {
 			t.Errorf("geo = %q, want RU", got.Geo)
@@ -155,7 +177,25 @@ func TestDspServer_GetBid(t *testing.T) {
 	t.Run("zero width — InvalidArgument", func(t *testing.T) {
 		srv := NewDspServer(&fakeService{})
 		req := validProtoBidRequest()
-		req.Width = 0
+		req.Banner.Width = 0
+
+		_, err := srv.GetBid(context.Background(), req)
+		assertGRPCCode(t, err, codes.InvalidArgument)
+	})
+
+	t.Run("banner type without banner params — InvalidArgument", func(t *testing.T) {
+		srv := NewDspServer(&fakeService{})
+		req := validProtoBidRequest()
+		req.Banner = nil
+
+		_, err := srv.GetBid(context.Background(), req)
+		assertGRPCCode(t, err, codes.InvalidArgument)
+	})
+
+	t.Run("unsupported type — InvalidArgument", func(t *testing.T) {
+		srv := NewDspServer(&fakeService{})
+		req := validProtoBidRequest()
+		req.Type = pb.CreativeType_CREATIVE_TYPE_UNSPECIFIED
 
 		_, err := srv.GetBid(context.Background(), req)
 		assertGRPCCode(t, err, codes.InvalidArgument)

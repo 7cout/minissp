@@ -120,10 +120,10 @@ func testBidRequest() domain.BidRequest {
 		RequestID: "req_1",
 		ImpID:     "imp_1",
 		SlotID:    "slot_1",
-		Width:     320,
-		Height:    50,
 		Geo:       "RU",
 		BidFloor:  1_000_000,
+		Type:      domain.CreativeTypeBanner,
+		Banner:    &domain.Banner{Width: 320, Height: 50},
 	}
 }
 
