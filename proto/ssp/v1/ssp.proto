@@ -17,11 +17,9 @@ service SspService {
   rpc RegisterSlot (RegisterSlotRequest) returns (Slot);
 
   // GetSlotByName возвращает слот по имени.
-  // Возвращает NOT_FOUND, если слот не найден.
   rpc GetSlotByName (GetSlotByNameRequest) returns (Slot);
 
   // RunAuction проводит аукцион для указанного слота.
-  // Возвращает NOT_FOUND, если слот не найден или нет ставок.
   rpc RunAuction (BidRequest) returns (BidResponse);
 
   // Impression сообщает, что показ состоялся.
@@ -33,25 +31,65 @@ service SspService {
   rpc GetPublisherBalance (GetPublisherBalanceRequest) returns (GetPublisherBalanceResponse);
 }
 
+// --- Типы контента ---
+
+// CreativeType — тип рекламного материала.
+enum CreativeType {
+  CREATIVE_TYPE_UNSPECIFIED = 0;
+  CREATIVE_TYPE_BANNER      = 1;
+  CREATIVE_TYPE_VIDEO       = 2;
+  CREATIVE_TYPE_NATIVE      = 3;
+  CREATIVE_TYPE_AUDIO       = 4;
+}
+
+// Banner — параметры баннерного креатива.
+message Banner {
+  int32 width  = 1;
+  int32 height = 2;
+}
+
+// Video — параметры видеокреатива.
+message Video {
+  int32 width    = 1;
+  int32 height   = 2;
+  int32 duration = 3;
+  repeated string mimes = 4;
+}
+
+// Native — параметры нативного креатива (заглушка).
+message Native {}
+
+// Audio — параметры аудиокреатива (заглушка).
+message Audio {}
+
 // --- Slot ---
 
 // Slot — рекламное место издателя.
 message Slot {
-  string id = 1;           // UUID, генерируется SSP
-  string publisher_id = 2; // определяется по api-key, но возвращается в ответе
-  string name = 3;
-  int32 width = 4;
-  int32 height = 5;
-  string geo = 6;
-  int64 min_price = 7;     // минимальная цена в микроединицах
+  string id           = 1;
+  string publisher_id = 2;
+  string name         = 3;
+  string geo          = 4;
+  int64  min_price    = 5;
+
+  // Тип и параметры.
+  CreativeType type   = 6;
+  Banner       banner = 7;
+  Video        video  = 8;
+  Native       native = 9;
+  Audio        audio  = 10;
 }
 
 message RegisterSlotRequest {
-  string name = 1;
-  int32 width = 2;
-  int32 height = 3;
-  string geo = 4;
-  int64 min_price = 5;
+  string name      = 1;
+  string geo       = 2;
+  int64  min_price = 3;
+
+  CreativeType type   = 4;
+  Banner       banner = 5;
+  Video        video  = 6;
+  Native       native = 7;
+  Audio        audio  = 8;
 }
 
 message GetSlotByNameRequest {
@@ -62,21 +100,21 @@ message GetSlotByNameRequest {
 
 // BidRequest — запрос рекламы от Publisher.
 //
-// Publisher НЕ присылает размеры слота — SSP знает их из БД.
+// Publisher НЕ присылает параметры слота — SSP знает их из БД.
 message BidRequest {
-  string request_id = 1;   // ID запроса для трассировки
-  string slot_id = 2;      // ID слота в SSP
-  string user_id = 3;      // опционально
+  string request_id = 1;
+  string slot_id    = 2;
+  string user_id    = 3;
 }
 
 // BidResponse — результат аукциона.
 //
-// Publisher получает URL креатива и URL для клика.
-// Остальные поля — для отладки и логирования.
+// Publisher получает только то, что нужно для показа баннера.
+// Внутренние детали (кампания, цена) остаются в SSP.
 message BidResponse {
-  string auction_id = 1;    // для Impression
-  string creative_url = 2;  // что показать
-  string click_url = 3;     // куда вести клик
+  string auction_id   = 1;
+  string creative_url = 2;
+  string click_url    = 3;
 }
 
 // --- Impression ---
@@ -96,5 +134,5 @@ message GetPublisherBalanceRequest {
 }
 
 message GetPublisherBalanceResponse {
-  int64 balance = 1;  // в микроединицах
+  int64 balance = 1;
 }

@@ -43,10 +43,8 @@ type SspServiceClient interface {
 	// Publisher'а, возвращается существующий.
 	RegisterSlot(ctx context.Context, in *RegisterSlotRequest, opts ...grpc.CallOption) (*Slot, error)
 	// GetSlotByName возвращает слот по имени.
-	// Возвращает NOT_FOUND, если слот не найден.
 	GetSlotByName(ctx context.Context, in *GetSlotByNameRequest, opts ...grpc.CallOption) (*Slot, error)
 	// RunAuction проводит аукцион для указанного слота.
-	// Возвращает NOT_FOUND, если слот не найден или нет ставок.
 	RunAuction(ctx context.Context, in *BidRequest, opts ...grpc.CallOption) (*BidResponse, error)
 	// Impression сообщает, что показ состоялся.
 	// Запускает биллинг: списание у DSP, начисление издателю.
@@ -130,10 +128,8 @@ type SspServiceServer interface {
 	// Publisher'а, возвращается существующий.
 	RegisterSlot(context.Context, *RegisterSlotRequest) (*Slot, error)
 	// GetSlotByName возвращает слот по имени.
-	// Возвращает NOT_FOUND, если слот не найден.
 	GetSlotByName(context.Context, *GetSlotByNameRequest) (*Slot, error)
 	// RunAuction проводит аукцион для указанного слота.
-	// Возвращает NOT_FOUND, если слот не найден или нет ставок.
 	RunAuction(context.Context, *BidRequest) (*BidResponse, error)
 	// Impression сообщает, что показ состоялся.
 	// Запускает биллинг: списание у DSP, начисление издателю.

@@ -22,23 +22,279 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// CreativeType — тип рекламного материала.
+type CreativeType int32
+
+const (
+	CreativeType_CREATIVE_TYPE_UNSPECIFIED CreativeType = 0
+	CreativeType_CREATIVE_TYPE_BANNER      CreativeType = 1
+	CreativeType_CREATIVE_TYPE_VIDEO       CreativeType = 2
+	CreativeType_CREATIVE_TYPE_NATIVE      CreativeType = 3
+	CreativeType_CREATIVE_TYPE_AUDIO       CreativeType = 4
+)
+
+// Enum value maps for CreativeType.
+var (
+	CreativeType_name = map[int32]string{
+		0: "CREATIVE_TYPE_UNSPECIFIED",
+		1: "CREATIVE_TYPE_BANNER",
+		2: "CREATIVE_TYPE_VIDEO",
+		3: "CREATIVE_TYPE_NATIVE",
+		4: "CREATIVE_TYPE_AUDIO",
+	}
+	CreativeType_value = map[string]int32{
+		"CREATIVE_TYPE_UNSPECIFIED": 0,
+		"CREATIVE_TYPE_BANNER":      1,
+		"CREATIVE_TYPE_VIDEO":       2,
+		"CREATIVE_TYPE_NATIVE":      3,
+		"CREATIVE_TYPE_AUDIO":       4,
+	}
+)
+
+func (x CreativeType) Enum() *CreativeType {
+	p := new(CreativeType)
+	*p = x
+	return p
+}
+
+func (x CreativeType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CreativeType) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_ssp_v1_ssp_proto_enumTypes[0].Descriptor()
+}
+
+func (CreativeType) Type() protoreflect.EnumType {
+	return &file_proto_ssp_v1_ssp_proto_enumTypes[0]
+}
+
+func (x CreativeType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CreativeType.Descriptor instead.
+func (CreativeType) EnumDescriptor() ([]byte, []int) {
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{0}
+}
+
+// Banner — параметры баннерного креатива.
+type Banner struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Width         int32                  `protobuf:"varint,1,opt,name=width,proto3" json:"width,omitempty"`
+	Height        int32                  `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Banner) Reset() {
+	*x = Banner{}
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Banner) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Banner) ProtoMessage() {}
+
+func (x *Banner) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Banner.ProtoReflect.Descriptor instead.
+func (*Banner) Descriptor() ([]byte, []int) {
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *Banner) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *Banner) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+// Video — параметры видеокреатива.
+type Video struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Width         int32                  `protobuf:"varint,1,opt,name=width,proto3" json:"width,omitempty"`
+	Height        int32                  `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"`
+	Duration      int32                  `protobuf:"varint,3,opt,name=duration,proto3" json:"duration,omitempty"`
+	Mimes         []string               `protobuf:"bytes,4,rep,name=mimes,proto3" json:"mimes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Video) Reset() {
+	*x = Video{}
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Video) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Video) ProtoMessage() {}
+
+func (x *Video) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Video.ProtoReflect.Descriptor instead.
+func (*Video) Descriptor() ([]byte, []int) {
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Video) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *Video) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *Video) GetDuration() int32 {
+	if x != nil {
+		return x.Duration
+	}
+	return 0
+}
+
+func (x *Video) GetMimes() []string {
+	if x != nil {
+		return x.Mimes
+	}
+	return nil
+}
+
+// Native — параметры нативного креатива (заглушка).
+type Native struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Native) Reset() {
+	*x = Native{}
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Native) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Native) ProtoMessage() {}
+
+func (x *Native) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Native.ProtoReflect.Descriptor instead.
+func (*Native) Descriptor() ([]byte, []int) {
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{2}
+}
+
+// Audio — параметры аудиокреатива (заглушка).
+type Audio struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Audio) Reset() {
+	*x = Audio{}
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Audio) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Audio) ProtoMessage() {}
+
+func (x *Audio) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Audio.ProtoReflect.Descriptor instead.
+func (*Audio) Descriptor() ([]byte, []int) {
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{3}
+}
+
 // Slot — рекламное место издателя.
 type Slot struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                      // UUID, генерируется SSP
-	PublisherId   string                 `protobuf:"bytes,2,opt,name=publisher_id,json=publisherId,proto3" json:"publisher_id,omitempty"` // определяется по api-key, но возвращается в ответе
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Width         int32                  `protobuf:"varint,4,opt,name=width,proto3" json:"width,omitempty"`
-	Height        int32                  `protobuf:"varint,5,opt,name=height,proto3" json:"height,omitempty"`
-	Geo           string                 `protobuf:"bytes,6,opt,name=geo,proto3" json:"geo,omitempty"`
-	MinPrice      int64                  `protobuf:"varint,7,opt,name=min_price,json=minPrice,proto3" json:"min_price,omitempty"` // минимальная цена в микроединицах
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	PublisherId string                 `protobuf:"bytes,2,opt,name=publisher_id,json=publisherId,proto3" json:"publisher_id,omitempty"`
+	Name        string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Geo         string                 `protobuf:"bytes,4,opt,name=geo,proto3" json:"geo,omitempty"`
+	MinPrice    int64                  `protobuf:"varint,5,opt,name=min_price,json=minPrice,proto3" json:"min_price,omitempty"`
+	// Тип и параметры.
+	Type          CreativeType `protobuf:"varint,6,opt,name=type,proto3,enum=ssp.v1.CreativeType" json:"type,omitempty"`
+	Banner        *Banner      `protobuf:"bytes,7,opt,name=banner,proto3" json:"banner,omitempty"`
+	Video         *Video       `protobuf:"bytes,8,opt,name=video,proto3" json:"video,omitempty"`
+	Native        *Native      `protobuf:"bytes,9,opt,name=native,proto3" json:"native,omitempty"`
+	Audio         *Audio       `protobuf:"bytes,10,opt,name=audio,proto3" json:"audio,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Slot) Reset() {
 	*x = Slot{}
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[0]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -50,7 +306,7 @@ func (x *Slot) String() string {
 func (*Slot) ProtoMessage() {}
 
 func (x *Slot) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[0]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -63,7 +319,7 @@ func (x *Slot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Slot.ProtoReflect.Descriptor instead.
 func (*Slot) Descriptor() ([]byte, []int) {
-	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{0}
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Slot) GetId() string {
@@ -87,20 +343,6 @@ func (x *Slot) GetName() string {
 	return ""
 }
 
-func (x *Slot) GetWidth() int32 {
-	if x != nil {
-		return x.Width
-	}
-	return 0
-}
-
-func (x *Slot) GetHeight() int32 {
-	if x != nil {
-		return x.Height
-	}
-	return 0
-}
-
 func (x *Slot) GetGeo() string {
 	if x != nil {
 		return x.Geo
@@ -115,20 +357,58 @@ func (x *Slot) GetMinPrice() int64 {
 	return 0
 }
 
+func (x *Slot) GetType() CreativeType {
+	if x != nil {
+		return x.Type
+	}
+	return CreativeType_CREATIVE_TYPE_UNSPECIFIED
+}
+
+func (x *Slot) GetBanner() *Banner {
+	if x != nil {
+		return x.Banner
+	}
+	return nil
+}
+
+func (x *Slot) GetVideo() *Video {
+	if x != nil {
+		return x.Video
+	}
+	return nil
+}
+
+func (x *Slot) GetNative() *Native {
+	if x != nil {
+		return x.Native
+	}
+	return nil
+}
+
+func (x *Slot) GetAudio() *Audio {
+	if x != nil {
+		return x.Audio
+	}
+	return nil
+}
+
 type RegisterSlotRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Width         int32                  `protobuf:"varint,2,opt,name=width,proto3" json:"width,omitempty"`
-	Height        int32                  `protobuf:"varint,3,opt,name=height,proto3" json:"height,omitempty"`
-	Geo           string                 `protobuf:"bytes,4,opt,name=geo,proto3" json:"geo,omitempty"`
-	MinPrice      int64                  `protobuf:"varint,5,opt,name=min_price,json=minPrice,proto3" json:"min_price,omitempty"`
+	Geo           string                 `protobuf:"bytes,2,opt,name=geo,proto3" json:"geo,omitempty"`
+	MinPrice      int64                  `protobuf:"varint,3,opt,name=min_price,json=minPrice,proto3" json:"min_price,omitempty"`
+	Type          CreativeType           `protobuf:"varint,4,opt,name=type,proto3,enum=ssp.v1.CreativeType" json:"type,omitempty"`
+	Banner        *Banner                `protobuf:"bytes,5,opt,name=banner,proto3" json:"banner,omitempty"`
+	Video         *Video                 `protobuf:"bytes,6,opt,name=video,proto3" json:"video,omitempty"`
+	Native        *Native                `protobuf:"bytes,7,opt,name=native,proto3" json:"native,omitempty"`
+	Audio         *Audio                 `protobuf:"bytes,8,opt,name=audio,proto3" json:"audio,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterSlotRequest) Reset() {
 	*x = RegisterSlotRequest{}
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[1]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -140,7 +420,7 @@ func (x *RegisterSlotRequest) String() string {
 func (*RegisterSlotRequest) ProtoMessage() {}
 
 func (x *RegisterSlotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[1]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -153,7 +433,7 @@ func (x *RegisterSlotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterSlotRequest.ProtoReflect.Descriptor instead.
 func (*RegisterSlotRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{1}
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *RegisterSlotRequest) GetName() string {
@@ -161,20 +441,6 @@ func (x *RegisterSlotRequest) GetName() string {
 		return x.Name
 	}
 	return ""
-}
-
-func (x *RegisterSlotRequest) GetWidth() int32 {
-	if x != nil {
-		return x.Width
-	}
-	return 0
-}
-
-func (x *RegisterSlotRequest) GetHeight() int32 {
-	if x != nil {
-		return x.Height
-	}
-	return 0
 }
 
 func (x *RegisterSlotRequest) GetGeo() string {
@@ -191,6 +457,41 @@ func (x *RegisterSlotRequest) GetMinPrice() int64 {
 	return 0
 }
 
+func (x *RegisterSlotRequest) GetType() CreativeType {
+	if x != nil {
+		return x.Type
+	}
+	return CreativeType_CREATIVE_TYPE_UNSPECIFIED
+}
+
+func (x *RegisterSlotRequest) GetBanner() *Banner {
+	if x != nil {
+		return x.Banner
+	}
+	return nil
+}
+
+func (x *RegisterSlotRequest) GetVideo() *Video {
+	if x != nil {
+		return x.Video
+	}
+	return nil
+}
+
+func (x *RegisterSlotRequest) GetNative() *Native {
+	if x != nil {
+		return x.Native
+	}
+	return nil
+}
+
+func (x *RegisterSlotRequest) GetAudio() *Audio {
+	if x != nil {
+		return x.Audio
+	}
+	return nil
+}
+
 type GetSlotByNameRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -200,7 +501,7 @@ type GetSlotByNameRequest struct {
 
 func (x *GetSlotByNameRequest) Reset() {
 	*x = GetSlotByNameRequest{}
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[2]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -212,7 +513,7 @@ func (x *GetSlotByNameRequest) String() string {
 func (*GetSlotByNameRequest) ProtoMessage() {}
 
 func (x *GetSlotByNameRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[2]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -225,7 +526,7 @@ func (x *GetSlotByNameRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSlotByNameRequest.ProtoReflect.Descriptor instead.
 func (*GetSlotByNameRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{2}
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetSlotByNameRequest) GetName() string {
@@ -237,19 +538,19 @@ func (x *GetSlotByNameRequest) GetName() string {
 
 // BidRequest — запрос рекламы от Publisher.
 //
-// Publisher НЕ присылает размеры слота — SSP знает их из БД.
+// Publisher НЕ присылает параметры слота — SSP знает их из БД.
 type BidRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"` // ID запроса для трассировки
-	SlotId        string                 `protobuf:"bytes,2,opt,name=slot_id,json=slotId,proto3" json:"slot_id,omitempty"`          // ID слота в SSP
-	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`          // опционально
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	SlotId        string                 `protobuf:"bytes,2,opt,name=slot_id,json=slotId,proto3" json:"slot_id,omitempty"`
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BidRequest) Reset() {
 	*x = BidRequest{}
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[3]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -261,7 +562,7 @@ func (x *BidRequest) String() string {
 func (*BidRequest) ProtoMessage() {}
 
 func (x *BidRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[3]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -274,7 +575,7 @@ func (x *BidRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BidRequest.ProtoReflect.Descriptor instead.
 func (*BidRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{3}
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *BidRequest) GetRequestId() string {
@@ -300,20 +601,20 @@ func (x *BidRequest) GetUserId() string {
 
 // BidResponse — результат аукциона.
 //
-// Publisher получает URL креатива и URL для клика.
-// Остальные поля — для отладки и логирования.
+// Publisher получает только то, что нужно для показа баннера.
+// Внутренние детали (кампания, цена) остаются в SSP.
 type BidResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	AuctionId     string                 `protobuf:"bytes,1,opt,name=auction_id,json=auctionId,proto3" json:"auction_id,omitempty"`       // для Impression
-	CreativeUrl   string                 `protobuf:"bytes,2,opt,name=creative_url,json=creativeUrl,proto3" json:"creative_url,omitempty"` // что показать
-	ClickUrl      string                 `protobuf:"bytes,3,opt,name=click_url,json=clickUrl,proto3" json:"click_url,omitempty"`          // куда вести клик
+	AuctionId     string                 `protobuf:"bytes,1,opt,name=auction_id,json=auctionId,proto3" json:"auction_id,omitempty"`
+	CreativeUrl   string                 `protobuf:"bytes,2,opt,name=creative_url,json=creativeUrl,proto3" json:"creative_url,omitempty"`
+	ClickUrl      string                 `protobuf:"bytes,3,opt,name=click_url,json=clickUrl,proto3" json:"click_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *BidResponse) Reset() {
 	*x = BidResponse{}
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[4]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -325,7 +626,7 @@ func (x *BidResponse) String() string {
 func (*BidResponse) ProtoMessage() {}
 
 func (x *BidResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[4]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -338,7 +639,7 @@ func (x *BidResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BidResponse.ProtoReflect.Descriptor instead.
 func (*BidResponse) Descriptor() ([]byte, []int) {
-	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{4}
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *BidResponse) GetAuctionId() string {
@@ -371,7 +672,7 @@ type ImpressionRequest struct {
 
 func (x *ImpressionRequest) Reset() {
 	*x = ImpressionRequest{}
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[5]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -383,7 +684,7 @@ func (x *ImpressionRequest) String() string {
 func (*ImpressionRequest) ProtoMessage() {}
 
 func (x *ImpressionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[5]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -396,7 +697,7 @@ func (x *ImpressionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImpressionRequest.ProtoReflect.Descriptor instead.
 func (*ImpressionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{5}
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ImpressionRequest) GetAuctionId() string {
@@ -415,7 +716,7 @@ type ImpressionResponse struct {
 
 func (x *ImpressionResponse) Reset() {
 	*x = ImpressionResponse{}
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[6]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -427,7 +728,7 @@ func (x *ImpressionResponse) String() string {
 func (*ImpressionResponse) ProtoMessage() {}
 
 func (x *ImpressionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[6]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,7 +741,7 @@ func (x *ImpressionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImpressionResponse.ProtoReflect.Descriptor instead.
 func (*ImpressionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{6}
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ImpressionResponse) GetOk() bool {
@@ -458,7 +759,7 @@ type GetPublisherBalanceRequest struct {
 
 func (x *GetPublisherBalanceRequest) Reset() {
 	*x = GetPublisherBalanceRequest{}
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[7]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -470,7 +771,7 @@ func (x *GetPublisherBalanceRequest) String() string {
 func (*GetPublisherBalanceRequest) ProtoMessage() {}
 
 func (x *GetPublisherBalanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[7]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -483,19 +784,19 @@ func (x *GetPublisherBalanceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPublisherBalanceRequest.ProtoReflect.Descriptor instead.
 func (*GetPublisherBalanceRequest) Descriptor() ([]byte, []int) {
-	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{7}
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{11}
 }
 
 type GetPublisherBalanceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Balance       int64                  `protobuf:"varint,1,opt,name=balance,proto3" json:"balance,omitempty"` // в микроединицах
+	Balance       int64                  `protobuf:"varint,1,opt,name=balance,proto3" json:"balance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetPublisherBalanceResponse) Reset() {
 	*x = GetPublisherBalanceResponse{}
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[8]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -507,7 +808,7 @@ func (x *GetPublisherBalanceResponse) String() string {
 func (*GetPublisherBalanceResponse) ProtoMessage() {}
 
 func (x *GetPublisherBalanceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[8]
+	mi := &file_proto_ssp_v1_ssp_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -520,7 +821,7 @@ func (x *GetPublisherBalanceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPublisherBalanceResponse.ProtoReflect.Descriptor instead.
 func (*GetPublisherBalanceResponse) Descriptor() ([]byte, []int) {
-	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{8}
+	return file_proto_ssp_v1_ssp_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetPublisherBalanceResponse) GetBalance() int64 {
@@ -534,21 +835,38 @@ var File_proto_ssp_v1_ssp_proto protoreflect.FileDescriptor
 
 const file_proto_ssp_v1_ssp_proto_rawDesc = "" +
 	"\n" +
-	"\x16proto/ssp/v1/ssp.proto\x12\x06ssp.v1\"\xaa\x01\n" +
+	"\x16proto/ssp/v1/ssp.proto\x12\x06ssp.v1\"6\n" +
+	"\x06Banner\x12\x14\n" +
+	"\x05width\x18\x01 \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\x02 \x01(\x05R\x06height\"g\n" +
+	"\x05Video\x12\x14\n" +
+	"\x05width\x18\x01 \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\x02 \x01(\x05R\x06height\x12\x1a\n" +
+	"\bduration\x18\x03 \x01(\x05R\bduration\x12\x14\n" +
+	"\x05mimes\x18\x04 \x03(\tR\x05mimes\"\b\n" +
+	"\x06Native\"\a\n" +
+	"\x05Audio\"\xc0\x02\n" +
 	"\x04Slot\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fpublisher_id\x18\x02 \x01(\tR\vpublisherId\x12\x12\n" +
-	"\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n" +
-	"\x05width\x18\x04 \x01(\x05R\x05width\x12\x16\n" +
-	"\x06height\x18\x05 \x01(\x05R\x06height\x12\x10\n" +
-	"\x03geo\x18\x06 \x01(\tR\x03geo\x12\x1b\n" +
-	"\tmin_price\x18\a \x01(\x03R\bminPrice\"\x86\x01\n" +
-	"\x13RegisterSlotRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
-	"\x05width\x18\x02 \x01(\x05R\x05width\x12\x16\n" +
-	"\x06height\x18\x03 \x01(\x05R\x06height\x12\x10\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x10\n" +
 	"\x03geo\x18\x04 \x01(\tR\x03geo\x12\x1b\n" +
-	"\tmin_price\x18\x05 \x01(\x03R\bminPrice\"*\n" +
+	"\tmin_price\x18\x05 \x01(\x03R\bminPrice\x12(\n" +
+	"\x04type\x18\x06 \x01(\x0e2\x14.ssp.v1.CreativeTypeR\x04type\x12&\n" +
+	"\x06banner\x18\a \x01(\v2\x0e.ssp.v1.BannerR\x06banner\x12#\n" +
+	"\x05video\x18\b \x01(\v2\r.ssp.v1.VideoR\x05video\x12&\n" +
+	"\x06native\x18\t \x01(\v2\x0e.ssp.v1.NativeR\x06native\x12#\n" +
+	"\x05audio\x18\n" +
+	" \x01(\v2\r.ssp.v1.AudioR\x05audio\"\x9c\x02\n" +
+	"\x13RegisterSlotRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
+	"\x03geo\x18\x02 \x01(\tR\x03geo\x12\x1b\n" +
+	"\tmin_price\x18\x03 \x01(\x03R\bminPrice\x12(\n" +
+	"\x04type\x18\x04 \x01(\x0e2\x14.ssp.v1.CreativeTypeR\x04type\x12&\n" +
+	"\x06banner\x18\x05 \x01(\v2\x0e.ssp.v1.BannerR\x06banner\x12#\n" +
+	"\x05video\x18\x06 \x01(\v2\r.ssp.v1.VideoR\x05video\x12&\n" +
+	"\x06native\x18\a \x01(\v2\x0e.ssp.v1.NativeR\x06native\x12#\n" +
+	"\x05audio\x18\b \x01(\v2\r.ssp.v1.AudioR\x05audio\"*\n" +
 	"\x14GetSlotByNameRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"]\n" +
 	"\n" +
@@ -569,7 +887,13 @@ const file_proto_ssp_v1_ssp_proto_rawDesc = "" +
 	"\x02ok\x18\x01 \x01(\bR\x02ok\"\x1c\n" +
 	"\x1aGetPublisherBalanceRequest\"7\n" +
 	"\x1bGetPublisherBalanceResponse\x12\x18\n" +
-	"\abalance\x18\x01 \x01(\x03R\abalance2\xe0\x02\n" +
+	"\abalance\x18\x01 \x01(\x03R\abalance*\x93\x01\n" +
+	"\fCreativeType\x12\x1d\n" +
+	"\x19CREATIVE_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14CREATIVE_TYPE_BANNER\x10\x01\x12\x17\n" +
+	"\x13CREATIVE_TYPE_VIDEO\x10\x02\x12\x18\n" +
+	"\x14CREATIVE_TYPE_NATIVE\x10\x03\x12\x17\n" +
+	"\x13CREATIVE_TYPE_AUDIO\x10\x042\xe0\x02\n" +
 	"\n" +
 	"SspService\x129\n" +
 	"\fRegisterSlot\x12\x1b.ssp.v1.RegisterSlotRequest\x1a\f.ssp.v1.Slot\x12;\n" +
@@ -592,34 +916,50 @@ func file_proto_ssp_v1_ssp_proto_rawDescGZIP() []byte {
 	return file_proto_ssp_v1_ssp_proto_rawDescData
 }
 
-var file_proto_ssp_v1_ssp_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_proto_ssp_v1_ssp_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_ssp_v1_ssp_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_proto_ssp_v1_ssp_proto_goTypes = []any{
-	(*Slot)(nil),                        // 0: ssp.v1.Slot
-	(*RegisterSlotRequest)(nil),         // 1: ssp.v1.RegisterSlotRequest
-	(*GetSlotByNameRequest)(nil),        // 2: ssp.v1.GetSlotByNameRequest
-	(*BidRequest)(nil),                  // 3: ssp.v1.BidRequest
-	(*BidResponse)(nil),                 // 4: ssp.v1.BidResponse
-	(*ImpressionRequest)(nil),           // 5: ssp.v1.ImpressionRequest
-	(*ImpressionResponse)(nil),          // 6: ssp.v1.ImpressionResponse
-	(*GetPublisherBalanceRequest)(nil),  // 7: ssp.v1.GetPublisherBalanceRequest
-	(*GetPublisherBalanceResponse)(nil), // 8: ssp.v1.GetPublisherBalanceResponse
+	(CreativeType)(0),                   // 0: ssp.v1.CreativeType
+	(*Banner)(nil),                      // 1: ssp.v1.Banner
+	(*Video)(nil),                       // 2: ssp.v1.Video
+	(*Native)(nil),                      // 3: ssp.v1.Native
+	(*Audio)(nil),                       // 4: ssp.v1.Audio
+	(*Slot)(nil),                        // 5: ssp.v1.Slot
+	(*RegisterSlotRequest)(nil),         // 6: ssp.v1.RegisterSlotRequest
+	(*GetSlotByNameRequest)(nil),        // 7: ssp.v1.GetSlotByNameRequest
+	(*BidRequest)(nil),                  // 8: ssp.v1.BidRequest
+	(*BidResponse)(nil),                 // 9: ssp.v1.BidResponse
+	(*ImpressionRequest)(nil),           // 10: ssp.v1.ImpressionRequest
+	(*ImpressionResponse)(nil),          // 11: ssp.v1.ImpressionResponse
+	(*GetPublisherBalanceRequest)(nil),  // 12: ssp.v1.GetPublisherBalanceRequest
+	(*GetPublisherBalanceResponse)(nil), // 13: ssp.v1.GetPublisherBalanceResponse
 }
 var file_proto_ssp_v1_ssp_proto_depIdxs = []int32{
-	1, // 0: ssp.v1.SspService.RegisterSlot:input_type -> ssp.v1.RegisterSlotRequest
-	2, // 1: ssp.v1.SspService.GetSlotByName:input_type -> ssp.v1.GetSlotByNameRequest
-	3, // 2: ssp.v1.SspService.RunAuction:input_type -> ssp.v1.BidRequest
-	5, // 3: ssp.v1.SspService.Impression:input_type -> ssp.v1.ImpressionRequest
-	7, // 4: ssp.v1.SspService.GetPublisherBalance:input_type -> ssp.v1.GetPublisherBalanceRequest
-	0, // 5: ssp.v1.SspService.RegisterSlot:output_type -> ssp.v1.Slot
-	0, // 6: ssp.v1.SspService.GetSlotByName:output_type -> ssp.v1.Slot
-	4, // 7: ssp.v1.SspService.RunAuction:output_type -> ssp.v1.BidResponse
-	6, // 8: ssp.v1.SspService.Impression:output_type -> ssp.v1.ImpressionResponse
-	8, // 9: ssp.v1.SspService.GetPublisherBalance:output_type -> ssp.v1.GetPublisherBalanceResponse
-	5, // [5:10] is the sub-list for method output_type
-	0, // [0:5] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: ssp.v1.Slot.type:type_name -> ssp.v1.CreativeType
+	1,  // 1: ssp.v1.Slot.banner:type_name -> ssp.v1.Banner
+	2,  // 2: ssp.v1.Slot.video:type_name -> ssp.v1.Video
+	3,  // 3: ssp.v1.Slot.native:type_name -> ssp.v1.Native
+	4,  // 4: ssp.v1.Slot.audio:type_name -> ssp.v1.Audio
+	0,  // 5: ssp.v1.RegisterSlotRequest.type:type_name -> ssp.v1.CreativeType
+	1,  // 6: ssp.v1.RegisterSlotRequest.banner:type_name -> ssp.v1.Banner
+	2,  // 7: ssp.v1.RegisterSlotRequest.video:type_name -> ssp.v1.Video
+	3,  // 8: ssp.v1.RegisterSlotRequest.native:type_name -> ssp.v1.Native
+	4,  // 9: ssp.v1.RegisterSlotRequest.audio:type_name -> ssp.v1.Audio
+	6,  // 10: ssp.v1.SspService.RegisterSlot:input_type -> ssp.v1.RegisterSlotRequest
+	7,  // 11: ssp.v1.SspService.GetSlotByName:input_type -> ssp.v1.GetSlotByNameRequest
+	8,  // 12: ssp.v1.SspService.RunAuction:input_type -> ssp.v1.BidRequest
+	10, // 13: ssp.v1.SspService.Impression:input_type -> ssp.v1.ImpressionRequest
+	12, // 14: ssp.v1.SspService.GetPublisherBalance:input_type -> ssp.v1.GetPublisherBalanceRequest
+	5,  // 15: ssp.v1.SspService.RegisterSlot:output_type -> ssp.v1.Slot
+	5,  // 16: ssp.v1.SspService.GetSlotByName:output_type -> ssp.v1.Slot
+	9,  // 17: ssp.v1.SspService.RunAuction:output_type -> ssp.v1.BidResponse
+	11, // 18: ssp.v1.SspService.Impression:output_type -> ssp.v1.ImpressionResponse
+	13, // 19: ssp.v1.SspService.GetPublisherBalance:output_type -> ssp.v1.GetPublisherBalanceResponse
+	15, // [15:20] is the sub-list for method output_type
+	10, // [10:15] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_proto_ssp_v1_ssp_proto_init() }
@@ -632,13 +972,14 @@ func file_proto_ssp_v1_ssp_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_ssp_v1_ssp_proto_rawDesc), len(file_proto_ssp_v1_ssp_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   9,
+			NumEnums:      1,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_proto_ssp_v1_ssp_proto_goTypes,
 		DependencyIndexes: file_proto_ssp_v1_ssp_proto_depIdxs,
+		EnumInfos:         file_proto_ssp_v1_ssp_proto_enumTypes,
 		MessageInfos:      file_proto_ssp_v1_ssp_proto_msgTypes,
 	}.Build()
 	File_proto_ssp_v1_ssp_proto = out.File
