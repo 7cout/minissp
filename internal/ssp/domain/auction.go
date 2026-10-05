@@ -46,6 +46,7 @@ type AuctionRecord struct {
 	CreativeID  string
 	PublisherID string
 	SlotID      string
+	BidderID    string
 	Price       int64
 	CreatedAt   time.Time
 }
@@ -63,6 +64,9 @@ func (r AuctionRecord) Validate() error {
 	}
 	if r.Price <= 0 {
 		return fmt.Errorf("price must be positive, got %d", r.Price)
+	}
+	if strings.TrimSpace(r.BidderID) == "" {
+		return errors.New("bidder id is required")
 	}
 	return nil
 }
