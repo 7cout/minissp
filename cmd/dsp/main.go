@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -58,8 +59,19 @@ func run() error {
 	// Сервис DSP.
 	svc := service.New(campaigns, creatives, advertisers, multiplier)
 
+	// 2.5. API-key аутентификация.
+	apiKeys := splitEnvList("DSP_API_KEYS") // разделённые запятыми
+	validator := handler.NewStaticAPIKeyValidator(apiKeys)
+	if len(apiKeys) == 0 {
+		slog.Warn("DSP_API_KEYS is empty — authentication is DISABLED")
+	} else {
+		slog.Info("DSP auth enabled", "keys_count", len(apiKeys))
+	}
+
 	// gRPC.
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(handler.AuthInterceptor(validator)),
+	)
 	pb.RegisterDspServiceServer(grpcServer, handler.NewDspServer(svc))
 	reflection.Register(grpcServer)
 
@@ -122,4 +134,20 @@ func getEnvInt(key string, fallback int64) int64 {
 		}
 	}
 	return fallback
+}
+
+// splitEnvList читает переменную окружения и разделяет её по запятой.
+func splitEnvList(key string) []string {
+	v := os.Getenv(key)
+	if v == "" {
+		return nil
+	}
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }

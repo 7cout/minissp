@@ -8,7 +8,25 @@
 4. **Method:** `dsp.v1.DspService/GetBid`, `/Commit` или `/Rollback`.
 5. **Message:** скопируйте JSON из файла.
 
+## Аутентификация
+
+Все запросы требуют gRPC metadata:
+
+    api-key: ssp_dev_secret_key_12345
+
+В Postman:
+- Вкладка **Metadata** → добавь `api-key` со значением из .env.
+- Или **Authorization → API Key → Add to Header**.
+
+Если ключ не добавлен — сервер вернёт **Unauthenticated**.
+
 ## Порядок тестирования
+
+## Тесты аутентификации
+
+- Без metadata `api-key` → `16 UNAUTHENTICATED`.
+- С неверным ключом → `16 UNAUTHENTICATED`.
+- С валидным ключом → обычный ответ метода.
 
 ### Базовые (независимые)
 
