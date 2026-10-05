@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package ssp.v1;
+
+option go_package = "github.com/7cout/minissp/proto/gen/ssp/v1;sspv1";
+
+// SspService — внешний API SSP для Publisher.
+//
+// Аутентификация: каждый Publisher передаёт свой api-key в gRPC metadata
+// (заголовок "api-key"). Сервер определяет publisher_id по ключу.
+// В теле запросов publisher_id НЕ передаётся — его нельзя подделать.
+service SspService {
+  // RegisterSlot регистрирует рекламный слот издателя.
+  //
+  // Идемпотентно: если слот с таким именем уже существует у этого
+  // Publisher'а, возвращается существующий.
+  rpc RegisterSlot (RegisterSlotRequest) returns (Slot);
+
+  // GetSlotByName возвращает слот по имени.
+  // Возвращает NOT_FOUND, если слот не найден.
+  rpc GetSlotByName (GetSlotByNameRequest) returns (Slot);
+
+  // RunAuction проводит аукцион для указанного слота.
+  // Возвращает NOT_FOUND, если слот не найден или нет ставок.
+  rpc RunAuction (BidRequest) returns (BidResponse);
+
+  // Impression сообщает, что показ состоялся.
+  // Запускает биллинг: списание у DSP, начисление издателю.
+  // Идемпотентен по auction_id.
+  rpc Impression (ImpressionRequest) returns (ImpressionResponse);
+
+  // GetPublisherBalance возвращает баланс издателя.
+  rpc GetPublisherBalance (GetPublisherBalanceRequest) returns (GetPublisherBalanceResponse);
+}
+
+// --- Slot ---
+
+// Slot — рекламное место издателя.
+message Slot {
+  string id = 1;           // UUID, генерируется SSP
+  string publisher_id = 2; // определяется по api-key, но возвращается в ответе
+  string name = 3;
+  int32 width = 4;
+  int32 height = 5;
+  string geo = 6;
+  int64 min_price = 7;     // минимальная цена в микроединицах
+}
+
+message RegisterSlotRequest {
+  string name = 1;
+  int32 width = 2;
+  int32 height = 3;
+  string geo = 4;
+  int64 min_price = 5;
+}
+
+message GetSlotByNameRequest {
+  string name = 1;
+}
+
+// --- RunAuction ---
+
+// BidRequest — запрос рекламы от Publisher.
+//
+// Publisher НЕ присылает размеры слота — SSP знает их из БД.
+message BidRequest {
+  string request_id = 1;   // ID запроса для трассировки
+  string slot_id = 2;      // ID слота в SSP
+  string user_id = 3;      // опционально
+}
+
+// BidResponse — результат аукциона.
+//
+// Publisher получает URL креатива и URL для клика.
+// Остальные поля — для отладки и логирования.
+message BidResponse {
+  string auction_id = 1;    // для Impression
+  string creative_url = 2;  // что показать
+  string click_url = 3;     // куда вести клик
+}
+
+// --- Impression ---
+
+message ImpressionRequest {
+  string auction_id = 1;
+}
+
+message ImpressionResponse {
+  bool ok = 1;
+}
+
+// --- Balance ---
+
+message GetPublisherBalanceRequest {
+  // Пусто — publisher определяется по api-key.
+}
+
+message GetPublisherBalanceResponse {
+  int64 balance = 1;  // в микроединицах
+}
