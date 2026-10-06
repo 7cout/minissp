@@ -66,10 +66,13 @@ tasks:
 
   run:ssp:
     desc: "Запустить SSP с in-memory хранилищем"
+    dotenv: [deployments/.env]
     env:
-      STORAGE: memory
+      SSP_ADDR: ":50051"
+      DSP_API_KEY: "ssp_dev_secret_key_777"
+      DSP_NIKE_ADDR: "localhost:50052"
     cmds:
-      - go run ./cmd/auction
+      - go run ./cmd/ssp
 
   run:ssp:postgres:
     desc: "Запустить SSP с PostgreSQL"
