@@ -1,0 +1,10 @@
+{
+  "name": "inline_banner",
+  "geo": "RU",
+  "min_price": "1000000",
+  "type": "CREATIVE_TYPE_BANNER",
+  "banner": {
+    "width": 320,
+    "height": 50
+  }
+}
