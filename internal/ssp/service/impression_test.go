@@ -157,6 +157,83 @@ func TestService_Impression_CommitFails(t *testing.T) {
 	}
 }
 
+func TestService_Impression_PublisherNotFound_NoCommit(t *testing.T) {
+	bidder := testBidder("nike", "camp_nike", 5_000_000)
+	svc, slots, pubs := newTestService(bidder)
+	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	pubs.Add(testPublisher("pub_1"))
+
+	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
+		RequestID: "req_1",
+		SlotID:    "slot_1",
+	})
+
+	// Удаляем publisher'а из репозитория — симулируем «publisher исчез».
+	pubs.mu.Lock()
+	delete(pubs.byID, "pub_1")
+	delete(pubs.byAPIKey, "test-key-pub_1")
+	pubs.mu.Unlock()
+
+	err := svc.Impression(context.Background(), result.AuctionID)
+	if !errors.Is(err, domain.ErrPublisherNotFound) {
+		t.Errorf("want ErrPublisherNotFound, got %v", err)
+	}
+
+	// Commit в DSP не должен был уйти.
+	bidder.mu.Lock()
+	committed := bidder.capturedCommitID
+	bidder.mu.Unlock()
+	if committed != "" {
+		t.Errorf("commit should not be called, got %q", committed)
+	}
+
+	// Запись должна вернуться — можно повторить после починки данных.
+	if _, ok := svc.takeAuction(result.AuctionID); !ok {
+		t.Error("auction record should be restored")
+	}
+}
+
+func TestService_Impression_AddBalanceFails_ProcessedStays(t *testing.T) {
+	bidder := testBidder("nike", "camp_nike", 5_000_000)
+	svc, slots, pubs := newTestService(bidder)
+	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	pubs.Add(testPublisher("pub_1"))
+
+	// AddBalance начнёт падать после предварительной проверки Get.
+	// Get пройдёт (publisher есть), а AddBalance — нет.
+	pubs.addBalanceErr = errors.New("balance backend down")
+
+	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
+		RequestID: "req_1",
+		SlotID:    "slot_1",
+	})
+
+	err := svc.Impression(context.Background(), result.AuctionID)
+	if err == nil {
+		t.Fatal("want error, got nil")
+	}
+
+	// Commit в DSP всё равно ушёл — деньги списаны.
+	bidder.mu.Lock()
+	committed := bidder.capturedCommitID
+	bidder.mu.Unlock()
+	if committed != "camp_nike" {
+		t.Errorf("commit should be called, got %q", committed)
+	}
+
+	// Метка processed осталась — повторный Impression не должен
+	// делать второй Commit.
+	err = svc.Impression(context.Background(), result.AuctionID)
+	if err != nil {
+		t.Errorf("second impression should be no-op, got %v", err)
+	}
+
+	// И записи в auctions больше нет — она «зафиксирована» как обработанная.
+	if _, ok := svc.takeAuction(result.AuctionID); ok {
+		t.Error("auction should not be in auctions map after failed AddBalance")
+	}
+}
+
 func TestService_GetPublisherBalance(t *testing.T) {
 	svc, _, pubs := newTestService()
 	p := testPublisher("pub_1")
