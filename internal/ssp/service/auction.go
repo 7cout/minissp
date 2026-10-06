@@ -30,6 +30,10 @@ func (s *Service) RunAuction(ctx context.Context, req domain.BidRequest) (*domai
 		return nil, fmt.Errorf("get slot %s: %w", req.SlotID, err)
 	}
 
+	// Генерируем ImpID до сбора ставок — он уходит в DSP
+	// как часть BidRequest и сохраняется в AuctionRecord.
+	req.ImpID = uuid.NewString()
+
 	bids, err := s.collectBids(ctx, req, slot)
 	if err != nil {
 		return nil, fmt.Errorf("collect bids: %w", err)
@@ -43,6 +47,7 @@ func (s *Service) RunAuction(ctx context.Context, req domain.BidRequest) (*domai
 	auctionID := uuid.NewString()
 	record := domain.AuctionRecord{
 		AuctionID:   auctionID,
+		ImpID:       req.ImpID, // ← теперь заполняем
 		CampaignID:  winner.Bid.CampaignID,
 		CreativeID:  winner.Bid.CreativeID,
 		PublisherID: slot.PublisherID,

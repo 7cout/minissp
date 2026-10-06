@@ -100,6 +100,7 @@ func startFakeDSP(t *testing.T, fake pb.DspServiceServer) *Client {
 func validBidRequest() domain.BidRequest {
 	return domain.BidRequest{
 		RequestID: "req_1",
+		ImpID:     "imp_1",
 		SlotID:    "slot_1",
 		UserID:    "user_1",
 	}
@@ -192,6 +193,9 @@ func TestClient_GetBid_ConvertsBannerSlot(t *testing.T) {
 	}
 
 	req := fake.capturedGetBidReq
+	if req.GetImpId() == "" {
+		t.Error("imp_id should not be empty")
+	}
 	if req == nil {
 		t.Fatal("request not captured")
 	}

@@ -14,6 +14,7 @@ type BidRequest struct {
 	RequestID string
 	SlotID    string
 	UserID    string
+	ImpID     string
 }
 
 // Validate проверяет инварианты запроса.

@@ -48,6 +48,10 @@ func TestService_RunAuction_HappyPath_SecondPrice(t *testing.T) {
 	if rec.Price != 8_000_000 {
 		t.Errorf("price = %d, want 8000000 (second)", rec.Price)
 	}
+
+	if rec.ImpID == "" {
+		t.Error("imp id should be set in auction record")
+	}
 }
 
 func TestService_RunAuction_SingleBid_UsesFloor(t *testing.T) {

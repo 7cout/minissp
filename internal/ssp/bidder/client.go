@@ -118,8 +118,13 @@ func (c *Client) withAuth(ctx context.Context) context.Context {
 
 // toProtoBidRequest конвертирует domain-запрос в protobuf.
 func toProtoBidRequest(req domain.BidRequest, slot *domain.Slot) (*pb.BidRequest, error) {
+	if req.ImpID == "" {
+		return nil, errors.New("imp id is required")
+	}
+
 	protoReq := &pb.BidRequest{
 		RequestId: req.RequestID,
+		ImpId:     req.ImpID, // ← теперь заполняется
 		SlotId:    req.SlotID,
 		Geo:       slot.Geo,
 		BidFloor:  slot.MinPrice,
