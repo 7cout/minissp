@@ -31,6 +31,10 @@ func (r *AdvertiserRepo) Add(a *domain.Advertiser) {
 //
 // Возвращает domain.ErrAdvertiserNotFound, если не найден.
 // Возвращает копию.
+//
+// ВНИМАНИЕ: domain.Advertiser сейчас состоит только из value-полей,
+// поэтому shallow copy безопасно. Если добавятся указатели или слайсы —
+// надо заменить на .Clone() (см. domain.Creative.Clone).
 func (r *AdvertiserRepo) Get(_ context.Context, id string) (*domain.Advertiser, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

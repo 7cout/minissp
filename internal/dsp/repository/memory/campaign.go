@@ -31,6 +31,10 @@ func (r *CampaignRepo) Add(c *domain.Campaign) {
 //
 // Возвращает domain.ErrCampaignNotFound, если не найдена.
 // Возвращает копию — вызывающий не может изменить данные в обход мьютекса.
+//
+// ВНИМАНИЕ: domain.Campaign сейчас состоит только из value-полей,
+// поэтому shallow copy безопасно. Если добавятся указатели или слайсы —
+// надо заменить на .Clone() (см. domain.Creative.Clone).
 func (r *CampaignRepo) Get(_ context.Context, id string) (*domain.Campaign, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
