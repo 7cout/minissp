@@ -16,14 +16,16 @@ type fakeCampaignRepo struct {
 	listErr     error
 	commitErr   error
 	rollbackErr error
+	uncommitErr error
 
 	// reserveErrByID — ошибка для конкретной кампании.
 	// Если ID нет в map — Reserve успешен.
 	reserveErrByID map[string]error
 
-	reserved   []call
-	committed  []call
-	rolledBack []call
+	reserved    []call
+	committed   []call
+	rolledBack  []call
+	uncommitted []call
 }
 
 type call struct {
@@ -75,6 +77,14 @@ func (f *fakeCampaignRepo) Rollback(_ context.Context, campaignID string, amount
 	return nil
 }
 
+func (f *fakeCampaignRepo) Uncommit(_ context.Context, campaignID string, amount int64) error {
+	if f.uncommitErr != nil {
+		return f.uncommitErr
+	}
+	f.uncommitted = append(f.uncommitted, call{campaignID, amount})
+	return nil
+}
+
 // --- Fake: CreativeRepository ---
 
 type fakeCreativeRepo struct {
@@ -93,16 +103,21 @@ func (f *fakeCreativeRepo) ListByCampaign(_ context.Context, campaignID string) 
 
 type fakeAdvertiserRepo struct {
 	advertisers map[string]*domain.Advertiser
+	getErr      error
 	spendErr    error
 	spent       []call
 }
 
 func (f *fakeAdvertiserRepo) Get(_ context.Context, id string) (*domain.Advertiser, error) {
+	if f.getErr != nil {
+		return nil, f.getErr
+	}
 	a, ok := f.advertisers[id]
 	if !ok {
 		return nil, domain.ErrAdvertiserNotFound
 	}
-	return a, nil
+	cp := *a
+	return &cp, nil
 }
 
 func (f *fakeAdvertiserRepo) Spend(_ context.Context, id string, amount int64) error {
@@ -153,4 +168,12 @@ func testBannerCreative(id, campaignID string, w, h int) domain.Creative {
 func testCampaignPtr(id, advertiserID, geo string) *domain.Campaign {
 	c := testCampaign(id, advertiserID, geo)
 	return &c
+}
+
+func testAdvertiser(id string, balance int64) *domain.Advertiser {
+	return &domain.Advertiser{
+		ID:      id,
+		Name:    "Test Advertiser",
+		Balance: balance,
+	}
 }

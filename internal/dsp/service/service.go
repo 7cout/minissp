@@ -13,6 +13,7 @@ type CampaignRepository interface {
 	Reserve(ctx context.Context, campaignID string, amount int64) error
 	Commit(ctx context.Context, campaignID string, amount int64) error
 	Rollback(ctx context.Context, campaignID string, amount int64) error
+	Uncommit(ctx context.Context, campaignID string, amount int64) error
 }
 
 // CreativeRepository — доступ к креативам.

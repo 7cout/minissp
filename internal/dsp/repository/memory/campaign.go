@@ -107,6 +107,24 @@ func (r *CampaignRepo) Commit(_ context.Context, campaignID string, amount int64
 	return nil
 }
 
+// Uncommit отменяет Commit — возвращает деньги из budget_reserved
+// обратно в budget_reserved... нет, увеличивает reserved.
+//
+// Используется сервисом для компенсации, если после успешного
+// Commit не удалось списать деньги с advertiser'а.
+func (r *CampaignRepo) Uncommit(_ context.Context, campaignID string, amount int64) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	c, ok := r.campaigns[campaignID]
+	if !ok {
+		return domain.ErrCampaignNotFound
+	}
+
+	c.BudgetReserved += amount
+	return nil
+}
+
 // Rollback отменяет резерв, возвращая деньги в budget_remaining.
 func (r *CampaignRepo) Rollback(_ context.Context, campaignID string, amount int64) error {
 	r.mu.Lock()
