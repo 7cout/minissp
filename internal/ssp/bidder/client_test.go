@@ -69,7 +69,6 @@ func (f *fakeDSP) Rollback(ctx context.Context, req *pb.RollbackRequest) (*pb.Ro
 // --- helpers ---
 
 // startFakeDSP запускает fake DSP через bufconn и возвращает клиент.
-// startFakeDSP запускает fake DSP через bufconn и возвращает клиент.
 func startFakeDSP(t *testing.T, fake pb.DspServiceServer) *Client {
 	t.Helper()
 
@@ -193,14 +192,14 @@ func TestClient_GetBid_ConvertsBannerSlot(t *testing.T) {
 	}
 
 	req := fake.capturedGetBidReq
-	if req.GetImpId() == "" {
-		t.Error("imp_id should not be empty")
-	}
 	if req == nil {
 		t.Fatal("request not captured")
 	}
 	if req.GetRequestId() != "req_1" {
 		t.Errorf("request_id = %q", req.GetRequestId())
+	}
+	if req.GetImpId() != "imp_1" {
+		t.Errorf("imp_id = %q, want imp_1", req.GetImpId())
 	}
 	if req.GetSlotId() != "slot_1" {
 		t.Errorf("slot_id = %q", req.GetSlotId())
@@ -361,8 +360,8 @@ func TestClient_Commit_NotFound(t *testing.T) {
 	c := startFakeDSP(t, fake)
 
 	err := c.Commit(context.Background(), "camp_1", 1_500_000)
-	if err == nil {
-		t.Fatal("want error, got nil")
+	if !errors.Is(err, domain.ErrCampaignNotFound) {
+		t.Errorf("want ErrCampaignNotFound, got %v", err)
 	}
 }
 
@@ -393,8 +392,8 @@ func TestClient_Rollback_NotFound(t *testing.T) {
 	c := startFakeDSP(t, fake)
 
 	err := c.Rollback(context.Background(), "camp_1", 1_500_000)
-	if err == nil {
-		t.Fatal("want error, got nil")
+	if !errors.Is(err, domain.ErrCampaignNotFound) {
+		t.Errorf("want ErrCampaignNotFound, got %v", err)
 	}
 }
 

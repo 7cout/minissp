@@ -25,11 +25,14 @@ func toGRPCError(ctx context.Context, err error, attrs ...any) error {
 	case errors.Is(err, domain.ErrPublisherNotFound):
 		return status.Error(codes.NotFound, "publisher not found")
 
-	case errors.Is(err, domain.ErrNoBids):
-		return status.Error(codes.NotFound, "no bids received")
-
 	case errors.Is(err, domain.ErrAuctionNotFound):
 		return status.Error(codes.NotFound, "auction not found")
+
+	case errors.Is(err, domain.ErrCampaignNotFound):
+		return status.Error(codes.NotFound, "campaign not found")
+
+	case errors.Is(err, domain.ErrNoBids):
+		return status.Error(codes.NotFound, "no bids received")
 
 	case errors.Is(err, domain.ErrInvalidID):
 		return status.Error(codes.InvalidArgument, "invalid id format")

@@ -19,6 +19,10 @@ var (
 	// ErrAuctionNotFound — аукцион с таким ID не найден.
 	ErrAuctionNotFound = errors.New("auction not found")
 
+	// ErrCampaignNotFound — кампания на стороне DSP не найдена.
+	// Возникает при Commit/Rollback, если DSP не знает такую кампанию.
+	ErrCampaignNotFound = errors.New("campaign not found")
+
 	// ErrInvalidID — ID не соответствует формату.
 	ErrInvalidID = errors.New("invalid id format")
 

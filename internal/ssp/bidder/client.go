@@ -73,7 +73,7 @@ func (c *Client) GetBid(ctx context.Context, req domain.BidRequest, slot *domain
 
 	resp, err := c.client.GetBid(ctx, protoReq)
 	if err != nil {
-		return nil, mapDSPError(err)
+		return nil, mapGetBidError(err)
 	}
 
 	bid, err := toDomainBid(resp)
@@ -92,7 +92,7 @@ func (c *Client) Commit(ctx context.Context, campaignID string, price int64) err
 		Price:      price,
 	})
 	if err != nil {
-		return mapDSPError(err)
+		return mapMutateError(err)
 	}
 	return nil
 }
@@ -106,7 +106,7 @@ func (c *Client) Rollback(ctx context.Context, campaignID string, price int64) e
 		Price:      price,
 	})
 	if err != nil {
-		return mapDSPError(err)
+		return mapMutateError(err)
 	}
 	return nil
 }
@@ -124,7 +124,7 @@ func toProtoBidRequest(req domain.BidRequest, slot *domain.Slot) (*pb.BidRequest
 
 	protoReq := &pb.BidRequest{
 		RequestId: req.RequestID,
-		ImpId:     req.ImpID, // ← теперь заполняется
+		ImpId:     req.ImpID,
 		SlotId:    req.SlotID,
 		Geo:       slot.Geo,
 		BidFloor:  slot.MinPrice,
@@ -190,11 +190,34 @@ func toDomainBid(resp *pb.BidResponse) (*domain.Bid, error) {
 	return bid, nil
 }
 
-// mapDSPError превращает gRPC-ошибки DSP в domain-ошибки SSP.
-func mapDSPError(err error) error {
+// mapGetBidError превращает gRPC-ошибки DSP в domain-ошибки SSP
+// для вызова GetBid.
+//
+// Здесь NotFound означает "нет подходящей кампании" — это не ошибка
+// с точки зрения аукциона, а нормальная ситуация. Превращаем в
+// ErrNoBids, который collectBids пропускает.
+func mapGetBidError(err error) error {
 	switch status.Code(err) {
 	case codes.NotFound:
 		return domain.ErrNoBids
+	case codes.Canceled:
+		return context.Canceled
+	case codes.DeadlineExceeded:
+		return context.DeadlineExceeded
+	default:
+		return err
+	}
+}
+
+// mapMutateError — для Commit/Rollback.
+//
+// Здесь NotFound = "кампания не найдена на DSP", это реальная ошибка,
+// а не "просто нет ставки". Возвращаем ErrCampaignNotFound, чтобы
+// вызывающий понимал семантику.
+func mapMutateError(err error) error {
+	switch status.Code(err) {
+	case codes.NotFound:
+		return domain.ErrCampaignNotFound
 	case codes.Canceled:
 		return context.Canceled
 	case codes.DeadlineExceeded:
