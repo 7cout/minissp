@@ -68,9 +68,9 @@ tasks:
     desc: "Запустить SSP с in-memory хранилищем"
     dotenv: [deployments/.env]
     env:
-      SSP_ADDR: ":50051"
-      DSP_API_KEY: "ssp_dev_secret_key_777"
-      DSP_NIKE_ADDR: "localhost:50052"
+      SSP_ADDR: '{{.SSP_ADDR | default ":50051"}}'
+      DSP_API_KEY: '{{.DSP_API_KEY}}'
+      DSP_NIKE_ADDR: '{{.DSP_NIKE_ADDR}}'
     cmds:
       - go run ./cmd/ssp
 
@@ -85,15 +85,14 @@ tasks:
   # --- DSP (пока только in-memory, postgres позже) ---
 
   run:dsp:
-    desc: "Запустить DSP с in-memory хранилищем"
     dotenv: [deployments/.env]
     env:
-      DSP_ADDR: ":50052"
-      DSP_BID_MULTIPLIER_PERCENT: "150"
+      DSP_ADDR: '{{.DSP_ADDR | default ":50052"}}'
+      DSP_BID_MULTIPLIER_PERCENT: '{{.DSP_BID_MULTIPLIER_PERCENT | default "150"}}'
       DSP_API_KEYS: '{{.DSP_API_KEYS}}'
     cmds:
       - go run ./cmd/dsp
-
+      
   # --- Publisher (позже) ---
 
   run:publisher:
