@@ -125,23 +125,67 @@ func TestSspServer_RegisterSlot(t *testing.T) {
 			t.Errorf("banner = %+v", resp.GetBanner())
 		}
 
-		// publisher_id взят из context, не из запроса.
 		if svc.capturedPublisherID != "pub_1" {
 			t.Errorf("captured publisher_id = %q", svc.capturedPublisherID)
 		}
 	})
 
-	t.Run("unauthorized — InvalidArgument", func(t *testing.T) {
+	t.Run("unauthorized — Unauthenticated", func(t *testing.T) {
 		srv := NewSspServer(&fakeSspService{})
 
 		_, err := srv.RegisterSlot(context.Background(), validProtoSlotReq())
 		assertGRPCCode(t, err, codes.Unauthenticated)
 	})
 
-	t.Run("invalid slot — InvalidArgument", func(t *testing.T) {
+	t.Run("empty name — InvalidArgument", func(t *testing.T) {
 		srv := NewSspServer(&fakeSspService{})
 		req := validProtoSlotReq()
-		req.Name = "" // пустое имя
+		req.Name = ""
+
+		_, err := srv.RegisterSlot(authedContext(), req)
+		assertGRPCCode(t, err, codes.InvalidArgument)
+	})
+
+	t.Run("invalid geo — InvalidArgument", func(t *testing.T) {
+		srv := NewSspServer(&fakeSspService{})
+		req := validProtoSlotReq()
+		req.Geo = "RUSSIA"
+
+		_, err := srv.RegisterSlot(authedContext(), req)
+		assertGRPCCode(t, err, codes.InvalidArgument)
+	})
+
+	t.Run("lowercase geo — InvalidArgument", func(t *testing.T) {
+		srv := NewSspServer(&fakeSspService{})
+		req := validProtoSlotReq()
+		req.Geo = "ru"
+
+		_, err := srv.RegisterSlot(authedContext(), req)
+		assertGRPCCode(t, err, codes.InvalidArgument)
+	})
+
+	t.Run("negative min_price — InvalidArgument", func(t *testing.T) {
+		srv := NewSspServer(&fakeSspService{})
+		req := validProtoSlotReq()
+		req.MinPrice = -1
+
+		_, err := srv.RegisterSlot(authedContext(), req)
+		assertGRPCCode(t, err, codes.InvalidArgument)
+	})
+
+	t.Run("banner without params — InvalidArgument", func(t *testing.T) {
+		srv := NewSspServer(&fakeSspService{})
+		req := validProtoSlotReq()
+		req.Banner = nil
+
+		_, err := srv.RegisterSlot(authedContext(), req)
+		assertGRPCCode(t, err, codes.InvalidArgument)
+	})
+
+	t.Run("unsupported type — InvalidArgument", func(t *testing.T) {
+		srv := NewSspServer(&fakeSspService{})
+		req := validProtoSlotReq()
+		req.Type = pb.CreativeType_CREATIVE_TYPE_UNSPECIFIED
 
 		_, err := srv.RegisterSlot(authedContext(), req)
 		assertGRPCCode(t, err, codes.InvalidArgument)
@@ -196,6 +240,15 @@ func TestSspServer_GetSlotByName(t *testing.T) {
 		assertGRPCCode(t, err, codes.Unauthenticated)
 	})
 
+	t.Run("empty name — InvalidArgument", func(t *testing.T) {
+		srv := NewSspServer(&fakeSspService{})
+
+		_, err := srv.GetSlotByName(authedContext(), &pb.GetSlotByNameRequest{
+			Name: "",
+		})
+		assertGRPCCode(t, err, codes.InvalidArgument)
+	})
+
 	t.Run("not found", func(t *testing.T) {
 		svc := &fakeSspService{getSlotErr: domain.ErrSlotNotFound}
 		srv := NewSspServer(svc)
@@ -242,7 +295,6 @@ func TestSspServer_RunAuction(t *testing.T) {
 			t.Errorf("click_url = %q", resp.GetClickUrl())
 		}
 
-		// Проверка конвертации pb → domain.
 		if svc.capturedBidReq.RequestID != "req_1" {
 			t.Errorf("request_id = %q", svc.capturedBidReq.RequestID)
 		}

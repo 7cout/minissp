@@ -70,6 +70,10 @@ func (h *SspServer) GetSlotByName(
 
 	attrs := []any{"publisher_id", publisherID, "name", req.GetName()}
 
+	if strings.TrimSpace(req.GetName()) == "" {
+		return nil, status.Error(codes.InvalidArgument, "name is required")
+	}
+
 	slot, err := h.service.GetSlotByName(ctx, publisherID, req.GetName())
 	if err != nil {
 		return nil, toGRPCError(ctx, err, attrs...)
@@ -163,9 +167,9 @@ func (h *SspServer) GetPublisherBalance(
 // --- Конвертеры ---
 
 // toDomainRegisterSlot конвертирует protobuf-запрос в domain-структуру
-// и делает транспортную валидацию — только тех полей, которые
-// приходят в запросе. Полная Validate() (с ID и publisher_id) —
-// вызывается в сервисе.
+// и делает транспортную валидацию: формат полей, которые присылает
+// клиент. Полная Validate() (с ID и publisher_id) вызывается в сервисе
+// как бэкстоп.
 func toDomainRegisterSlot(req *pb.RegisterSlotRequest) (domain.Slot, error) {
 	slot := domain.Slot{
 		Name:     req.GetName(),
@@ -183,6 +187,12 @@ func toDomainRegisterSlot(req *pb.RegisterSlotRequest) (domain.Slot, error) {
 	}
 	if slot.Type == "" {
 		return domain.Slot{}, errors.New("unsupported creative type")
+	}
+	if err := domain.ValidateGeoCode(slot.Geo); err != nil {
+		return domain.Slot{}, fmt.Errorf("geo: %w", err)
+	}
+	if slot.MinPrice < 0 {
+		return domain.Slot{}, fmt.Errorf("min_price cannot be negative, got %d", slot.MinPrice)
 	}
 	if err := validateParamsForType(slot); err != nil {
 		return domain.Slot{}, err

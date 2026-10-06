@@ -6,9 +6,12 @@ import (
 	"net/url"
 )
 
-// validateGeoCode проверяет, что код страны в формате ISO 3166-1 alpha-2:
+// ValidateGeoCode проверяет, что код страны в формате ISO 3166-1 alpha-2:
 // ровно две заглавные латинские буквы.
-func validateGeoCode(geo string) error {
+//
+// Экспортирована, чтобы транспортный слой (handler) мог валидировать
+// geo до вызова сервиса и возвращать InvalidArgument, а не Internal.
+func ValidateGeoCode(geo string) error {
 	if len(geo) != 2 {
 		return fmt.Errorf("must be 2 letters, got %q", geo)
 	}
@@ -20,9 +23,11 @@ func validateGeoCode(geo string) error {
 	return nil
 }
 
-// validateURL проверяет, что URL удовлетворяет формату:
+// ValidateURL проверяет, что URL удовлетворяет формату:
 // http:// или https://, содержит хост и не пустой.
-func validateURL(raw string) error {
+//
+// Экспортирована по тем же причинам, что ValidateGeoCode.
+func ValidateURL(raw string) error {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return fmt.Errorf("invalid url: %w", err)

@@ -30,10 +30,10 @@ func (b Bid) Validate() error {
 	if strings.TrimSpace(b.CreativeID) == "" {
 		return errors.New("bid creative id is required")
 	}
-	if err := validateURL(b.CreativeURL); err != nil {
+	if err := ValidateURL(b.CreativeURL); err != nil {
 		return fmt.Errorf("bid creative url: %w", err)
 	}
-	if err := validateURL(b.ClickURL); err != nil {
+	if err := ValidateURL(b.ClickURL); err != nil {
 		return fmt.Errorf("bid click url: %w", err)
 	}
 	if b.Price <= 0 {

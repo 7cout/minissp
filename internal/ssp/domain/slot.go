@@ -35,7 +35,7 @@ func (s Slot) Validate() error {
 	if strings.TrimSpace(s.Name) == "" {
 		return errors.New("slot name is required")
 	}
-	if err := validateGeoCode(s.Geo); err != nil {
+	if err := ValidateGeoCode(s.Geo); err != nil {
 		return fmt.Errorf("slot geo: %w", err)
 	}
 	if s.MinPrice < 0 {

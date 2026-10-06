@@ -22,9 +22,9 @@ func TestValidateGeoCode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateGeoCode(tt.geo)
+			err := ValidateGeoCode(tt.geo)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateGeoCode(%q) error = %v, wantErr = %v", tt.geo, err, tt.wantErr)
+				t.Errorf("ValidateGeoCode(%q) error = %v, wantErr = %v", tt.geo, err, tt.wantErr)
 			}
 		})
 	}
@@ -49,9 +49,9 @@ func TestValidateURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateURL(tt.url)
+			err := ValidateURL(tt.url)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateURL(%q) error = %v, wantErr = %v", tt.url, err, tt.wantErr)
+				t.Errorf("ValidateURL(%q) error = %v, wantErr = %v", tt.url, err, tt.wantErr)
 			}
 		})
 	}
