@@ -81,3 +81,34 @@ func (c Creative) Validate() error {
 	}
 	return nil
 }
+
+// Clone возвращает глубокую копию креатива.
+//
+// Копирует вложенные структуры (Banner, Video, Native, Audio) и слайс
+// MIMEs. Нужен, чтобы репозитории не отдавали наружу указатели на
+// собственное хранилище.
+func (c Creative) Clone() Creative {
+	cp := c
+
+	if c.Banner != nil {
+		b := *c.Banner
+		cp.Banner = &b
+	}
+	if c.Video != nil {
+		v := *c.Video
+		if c.Video.MIMEs != nil {
+			v.MIMEs = append([]string(nil), c.Video.MIMEs...)
+		}
+		cp.Video = &v
+	}
+	if c.Native != nil {
+		n := *c.Native
+		cp.Native = &n
+	}
+	if c.Audio != nil {
+		a := *c.Audio
+		cp.Audio = &a
+	}
+
+	return cp
+}

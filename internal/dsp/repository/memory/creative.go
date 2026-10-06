@@ -39,7 +39,7 @@ func (r *CreativeRepo) Get(_ context.Context, id string) (*domain.Creative, erro
 	if !ok {
 		return nil, domain.ErrCreativeNotFound
 	}
-	cp := *c
+	cp := c.Clone()
 	return &cp, nil
 }
 
@@ -53,7 +53,7 @@ func (r *CreativeRepo) ListByCampaign(_ context.Context, campaignID string) ([]d
 		if c.CampaignID != campaignID {
 			continue
 		}
-		result = append(result, *c)
+		result = append(result, c.Clone())
 	}
 	return result, nil
 }
