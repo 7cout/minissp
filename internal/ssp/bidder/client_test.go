@@ -93,7 +93,7 @@ func startFakeDSP(t *testing.T, fake pb.DspServiceServer) *Client {
 	}
 	t.Cleanup(func() { _ = conn.Close() })
 
-	return newClientWithConn("test-dsp", "test-api-key", conn)
+	return NewClientWithConn("test-dsp", "test-api-key", conn)
 }
 
 func validBidRequest() domain.BidRequest {
@@ -309,7 +309,6 @@ func TestClient_GetBid_Canceled(t *testing.T) {
 }
 
 func TestClient_GetBid_InvalidResponseFromDSP(t *testing.T) {
-	// DSP вернул битую ставку — клиент должен отбросить.
 	fake := &fakeDSP{
 		getBidResp: &pb.BidResponse{
 			BidId:       "bid_1",
@@ -418,11 +417,9 @@ func TestClient_Close(t *testing.T) {
 }
 
 func TestClient_GetBid_ContextTimeout(t *testing.T) {
-	// DSP отвечает медленно — клиент должен получить DeadlineExceeded.
 	fake := &fakeDSP{
 		getBidResp: validBidResponse(),
 	}
-	// Обёртка для замедления: используем задержку в fake-сервере
 	slowFake := &slowDSP{delay: 200 * time.Millisecond, inner: fake}
 	c := startFakeDSP(t, slowFake)
 
