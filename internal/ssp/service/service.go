@@ -14,6 +14,7 @@ type SlotRepository interface {
 	Get(ctx context.Context, id string) (*domain.Slot, error)
 	GetByName(ctx context.Context, publisherID, name string) (*domain.Slot, error)
 	Add(slot *domain.Slot)
+	AddIfAbsent(slot *domain.Slot) (existing *domain.Slot, inserted bool)
 }
 
 // PublisherRepository — доступ к издателям.

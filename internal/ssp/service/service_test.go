@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/7cout/minissp/internal/ssp/domain"
@@ -91,6 +92,22 @@ func (f *fakePublisherRepo) Add(p *domain.Publisher) {
 	defer f.mu.Unlock()
 	f.byID[p.ID] = p
 	f.byAPIKey[p.APIKey] = p
+}
+
+func (f *fakeSlotRepo) AddIfAbsent(slot *domain.Slot) (*domain.Slot, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	for _, s := range f.slots {
+		if s.PublisherID == slot.PublisherID && s.Name == slot.Name {
+			cp := *s
+			return &cp, false
+		}
+	}
+
+	f.slots[slot.ID] = slot
+	cp := *slot
+	return &cp, true
 }
 
 func (f *fakePublisherRepo) Get(_ context.Context, id string) (*domain.Publisher, error) {
@@ -256,4 +273,43 @@ func newTestService(bidders ...*fakeBidder) (*Service, *fakeSlotRepo, *fakePubli
 	}
 
 	return New(slots, pubs, clientList), slots, pubs
+}
+
+func TestService_RegisterSlot_Concurrent(t *testing.T) {
+	svc, _, _ := newTestService()
+
+	slot := domain.Slot{
+		Name:     "home_banner",
+		Geo:      "RU",
+		MinPrice: 1_000_000,
+		Type:     domain.CreativeTypeBanner,
+		Banner:   &domain.Banner{Width: 320, Height: 50},
+	}
+
+	const goroutines = 50
+	var wg sync.WaitGroup
+	ids := make([]string, goroutines)
+
+	start := make(chan struct{})
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			<-start
+			created, err := svc.RegisterSlot(context.Background(), "pub_1", slot)
+			if err != nil {
+				t.Errorf("goroutine %d: %v", idx, err)
+				return
+			}
+			ids[idx] = created.ID
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+
+	for i, id := range ids {
+		if id != ids[0] {
+			t.Errorf("goroutine %d returned %q, want %q", i, id, ids[0])
+		}
+	}
 }

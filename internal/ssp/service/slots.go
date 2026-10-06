@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -17,15 +16,12 @@ func (s *Service) GetSlotByName(ctx context.Context, publisherID, name string) (
 
 // RegisterSlot регистрирует слот.
 //
-// Идемпотентно: если слот с таким именем уже есть у этого
-// Publisher'а — возвращает существующий.
+// Идемпотентно: если слот с таким именем уже есть у этого Publisher'а —
+// возвращает существующий. Конкурентные вызовы с одним именем
+// возвращают один и тот же слот.
 func (s *Service) RegisterSlot(ctx context.Context, publisherID string, req domain.Slot) (*domain.Slot, error) {
-	existing, err := s.slots.GetByName(ctx, publisherID, req.Name)
-	if err == nil {
-		return existing, nil
-	}
-	if !errors.Is(err, domain.ErrSlotNotFound) {
-		return nil, fmt.Errorf("lookup slot by name: %w", err)
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
 	req.ID = uuid.NewString()
@@ -35,6 +31,6 @@ func (s *Service) RegisterSlot(ctx context.Context, publisherID string, req doma
 		return nil, fmt.Errorf("invalid slot: %w", err)
 	}
 
-	s.slots.Add(&req)
-	return &req, nil
+	slot, _ := s.slots.AddIfAbsent(&req)
+	return slot, nil
 }

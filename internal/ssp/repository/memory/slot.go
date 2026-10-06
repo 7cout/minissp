@@ -28,6 +28,30 @@ func (r *SlotRepo) Add(slot *domain.Slot) {
 	r.slots[slot.ID] = slot
 }
 
+// AddIfAbsent атомарно добавляет слот, если с таким (publisher_id, name)
+// ещё нет. Возвращает существующий слот и inserted=false, если такой
+// уже был.
+//
+// В отличие от Add, не перезаписывает по ID — защищает от дублей
+// при конкурентной регистрации.
+//
+// При переходе на PostgreSQL этот метод реализуется через
+// INSERT ... ON CONFLICT (publisher_id, name) DO NOTHING RETURNING.
+// Требуется UNIQUE-индекс на (publisher_id, name).
+func (r *SlotRepo) AddIfAbsent(slot *domain.Slot) (existing *domain.Slot, inserted bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, s := range r.slots {
+		if s.PublisherID == slot.PublisherID && s.Name == slot.Name {
+			return cloneSlot(s), false
+		}
+	}
+
+	r.slots[slot.ID] = slot
+	return cloneSlot(slot), true
+}
+
 // Get возвращает слот по ID.
 //
 // Возвращает domain.ErrSlotNotFound, если слот не найден.
