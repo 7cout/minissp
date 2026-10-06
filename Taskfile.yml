@@ -26,7 +26,7 @@ tasks:
       - sh: where scoop
         msg: "Scoop не установлен. См. https://scoop.sh"
     cmds:
-      - scoop install gcc     
+      - scoop install gcc
 
   format:
     desc: "Форматирует весь проект gofumpt + gci"
@@ -60,9 +60,9 @@ tasks:
   migrate:status:
     desc: "Показать статус миграций"
     cmds:
-      - goose -dir internal/db/migrations postgres "{{.DATABASE_URL}}" status  
+      - goose -dir internal/db/migrations postgres "{{.DATABASE_URL}}" status
 
-    # --- SSP (пока работает через cmd/auction) ---
+  # --- SSP ---
 
   run:ssp:
     desc: "Запустить SSP с in-memory хранилищем"
@@ -74,17 +74,19 @@ tasks:
     cmds:
       - go run ./cmd/ssp
 
-  run:ssp:postgres:
-    desc: "Запустить SSP с PostgreSQL"
-    dotenv: [deployments/.env]
-    env:
-      STORAGE: postgres
-    cmds:
-      - go run ./cmd/auction
+  # TODO: раскомментировать и дописать команду, когда появится cmd/ssp с Postgres.
+  # run:ssp:postgres:
+  #   desc: "Запустить SSP с PostgreSQL"
+  #   dotenv: [deployments/.env]
+  #   env:
+  #     STORAGE: postgres
+  #   cmds:
+  #     - go run ./cmd/ssp
 
-  # --- DSP (пока только in-memory, postgres позже) ---
+  # --- DSP ---
 
   run:dsp:
+    desc: "Запустить DSP с in-memory хранилищем"
     dotenv: [deployments/.env]
     env:
       DSP_ADDR: '{{.DSP_ADDR | default ":50052"}}'
@@ -92,20 +94,15 @@ tasks:
       DSP_API_KEYS: '{{.DSP_API_KEYS}}'
     cmds:
       - go run ./cmd/dsp
-      
+
   # --- Publisher (позже) ---
 
   run:publisher:
-    desc: "Запустить Publisher"
+    desc: "Запустить Publisher (заглушка, будет реализовано позже)"
     env:
       SSP_ADDR: "localhost:50051"
     cmds:
       - go run ./cmd/publisher
-
-  test:integration:
-    desc: "Интеграционные тесты"
-    cmds:
-      - go test -race -count=1 -tags=integration ./internal/auction/repository/postgres/...
 
   all:
     desc: "Полный цикл проверок: fmt - lint - test"
