@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/7cout/minissp/internal/ssp/domain"
@@ -65,6 +66,58 @@ func TestService_Impression_Idempotent(t *testing.T) {
 	}
 
 	// Баланс должен быть пополнен ровно один раз.
+	p, _ := pubs.Get(context.Background(), "pub_1")
+	if p.Balance != 4_000_000 {
+		t.Errorf("balance = %d, want 4000000 (charged once)", p.Balance)
+	}
+}
+
+func TestService_Impression_Concurrent(t *testing.T) {
+	bidder := testBidder("nike", "camp_nike", 5_000_000)
+	svc, slots, pubs := newTestService(bidder)
+	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	pubs.Add(testPublisher("pub_1"))
+
+	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
+		RequestID: "req_1",
+		SlotID:    "slot_1",
+	})
+
+	const goroutines = 50
+	var wg sync.WaitGroup
+	errs := make([]error, goroutines)
+
+	start := make(chan struct{})
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			<-start
+			errs[idx] = svc.Impression(context.Background(), result.AuctionID)
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+
+	// Все вызовы должны вернуть nil — идемпотентность.
+	for i, err := range errs {
+		if err != nil {
+			t.Errorf("goroutine %d: %v", i, err)
+		}
+	}
+
+	// Commit в DSP должен уйти ровно один раз.
+	bidder.mu.Lock()
+	commits := 0
+	if bidder.capturedCommitID != "" {
+		commits = 1
+	}
+	bidder.mu.Unlock()
+	if commits != 1 {
+		t.Errorf("commit count = %d, want 1", commits)
+	}
+
+	// Баланс publisher'а начислен ровно один раз.
 	p, _ := pubs.Get(context.Background(), "pub_1")
 	if p.Balance != 4_000_000 {
 		t.Errorf("balance = %d, want 4000000 (charged once)", p.Balance)

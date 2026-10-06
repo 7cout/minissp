@@ -47,7 +47,7 @@ func (s *Service) RunAuction(ctx context.Context, req domain.BidRequest) (*domai
 	auctionID := uuid.NewString()
 	record := domain.AuctionRecord{
 		AuctionID:   auctionID,
-		ImpID:       req.ImpID, // ← теперь заполняем
+		ImpID:       req.ImpID,
 		CampaignID:  winner.Bid.CampaignID,
 		CreativeID:  winner.Bid.CreativeID,
 		PublisherID: slot.PublisherID,
@@ -191,19 +191,40 @@ func (s *Service) listExpiredAuctions(now time.Time) []domain.AuctionRecord {
 	return expired
 }
 
-// markProcessed запоминает auction_id как обработанный.
-func (s *Service) markProcessed(auctionID string) {
+// takeForImpression атомарно проверяет, что auctionID ещё не обработан,
+// забирает запись из auctions и сразу помечает как обработанный.
+//
+// Возвращает:
+//   - (record, false, nil)             — запись взята, можно обрабатывать;
+//   - (_, true, nil)                   — auctionID уже обработан (идемпотентный повтор);
+//   - (_, false, ErrAuctionNotFound)   — записи нет.
+//
+// Помечаем processed ДО Commit, чтобы параллельный вызов увидел
+// метку и вернул nil, а не гонялся за той же записью.
+func (s *Service) takeForImpression(auctionID string) (domain.AuctionRecord, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if _, ok := s.processed[auctionID]; ok {
+		return domain.AuctionRecord{}, true, nil
+	}
+
+	record, ok := s.auctions[auctionID]
+	if !ok {
+		return domain.AuctionRecord{}, false, domain.ErrAuctionNotFound
+	}
+
+	delete(s.auctions, auctionID)
 	s.processed[auctionID] = time.Now()
+	return record, false, nil
 }
 
-// isProcessed проверяет, обрабатывался ли auction_id.
-func (s *Service) isProcessed(auctionID string) bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	_, ok := s.processed[auctionID]
-	return ok
+// unmarkProcessed снимает метку processed — вызывается, если Commit
+// упал и Impression надо повторить.
+func (s *Service) unmarkProcessed(auctionID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.processed, auctionID)
 }
 
 // cleanProcessed удаляет записи старше ProcessedTTL.

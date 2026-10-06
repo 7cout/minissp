@@ -10,21 +10,20 @@ import (
 
 // Impression обрабатывает подтверждение показа.
 //
-// Идемпотентно: повторный вызов с тем же auction_id вернёт nil,
-// но повторного списания не будет.
+// Идемпотентно: параллельные или повторные вызовы с тем же auction_id
+// возвращают nil, повторного списания не будет.
 func (s *Service) Impression(ctx context.Context, auctionID string) error {
-	// Уже обрабатывали — идемпотентный повтор.
-	if s.isProcessed(auctionID) {
+	record, alreadyProcessed, err := s.takeForImpression(auctionID)
+	if err != nil {
+		return err
+	}
+	if alreadyProcessed {
 		return nil
 	}
 
-	record, ok := s.takeAuction(auctionID)
-	if !ok {
-		return domain.ErrAuctionNotFound
-	}
-
 	if err := s.commitToBidder(ctx, record); err != nil {
-		// Возвращаем запись, чтобы можно было повторить.
+		// Снимаем метку и возвращаем запись, чтобы можно было повторить.
+		s.unmarkProcessed(auctionID)
 		s.storeAuction(record)
 		return fmt.Errorf("commit to bidder %s: %w", record.BidderID, err)
 	}
@@ -38,11 +37,12 @@ func (s *Service) Impression(ctx context.Context, auctionID string) error {
 			"error", err,
 		)
 		// Коммит уже прошёл — деньги списаны. Возвращаем ошибку,
-		// чтобы вызывающий знал о проблеме.
+		// чтобы вызывающий знал о проблеме. Метку processed НЕ снимаем:
+		// повторный Impression должен вернуть nil, иначе мы попробуем
+		// ещё раз списать с DSP.
 		return fmt.Errorf("add publisher balance: %w", err)
 	}
 
-	s.markProcessed(auctionID)
 	return nil
 }
 
