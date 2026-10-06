@@ -1,0 +1,10 @@
+{
+  "name": "negative_price_banner",
+  "geo": "RU",
+  "min_price": -1,
+  "type": "CREATIVE_TYPE_BANNER",
+  "banner": {
+    "width": 320,
+    "height": 50
+  }
+}
