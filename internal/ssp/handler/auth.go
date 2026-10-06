@@ -27,8 +27,8 @@ type PublisherResolver interface {
 // AuthInterceptor проверяет api-key в metadata и кладёт publisher_id
 // в context.
 //
-// Все методы, кроме RegisterSlot и GetSlotByName, требуют
-// аутентифицированного Publisher'а.
+// api-key обязателен для всех методов: если ключ отсутствует или
+// невалиден — codes.Unauthenticated.
 func AuthInterceptor(resolver PublisherResolver) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,

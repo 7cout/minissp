@@ -14,3 +14,18 @@ const (
 	CreativeAdidas = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 	CreativePuma   = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 )
+
+// AdvertiserIDs возвращает список ID всех seed-рекламодателей.
+func AdvertiserIDs() []string {
+	return []string{AdvertiserNike, AdvertiserAdidas, AdvertiserPuma}
+}
+
+// CampaignIDs возвращает список ID всех seed-кампаний.
+func CampaignIDs() []string {
+	return []string{CampaignNike, CampaignAdidas, CampaignPuma}
+}
+
+// CreativeIDs возвращает список ID всех seed-креативов.
+func CreativeIDs() []string {
+	return []string{CreativeNike, CreativeAdidas, CreativePuma}
+}

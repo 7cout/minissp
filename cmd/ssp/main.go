@@ -115,8 +115,8 @@ func run() error {
 
 // buildBidders создаёт gRPC-клиентов ко всем известным DSP.
 //
-// Адреса и ключи берём из env. Для pet-проекта — три DSP
-// с разными стратегиями ставок, но все указывают на один процесс.
+// Адреса и ключи берём из env. Пока сконфигурирован один DSP;
+// добавление второго — просто новая запись в configs.
 func buildBidders() ([]service.BidderClient, error) {
 	type dspConfig struct {
 		name   string

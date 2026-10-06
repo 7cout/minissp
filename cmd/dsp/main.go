@@ -48,9 +48,9 @@ func run() error {
 
 	seed.PopulateMemory(advertisers, campaigns, creatives)
 	slog.Info("seed data loaded",
-		"advertisers", 3,
-		"campaigns", 3,
-		"creatives", 3,
+		"advertisers", len(seed.AdvertiserIDs()),
+		"campaigns", len(seed.CampaignIDs()),
+		"creatives", len(seed.CreativeIDs()),
 	)
 
 	// Стратегия ставки — из env, дефолт 150%.

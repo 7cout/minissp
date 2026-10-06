@@ -85,7 +85,6 @@ func (s *Service) collectBids(
 
 	var wg sync.WaitGroup
 	for _, b := range s.bidders {
-		b := b
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
