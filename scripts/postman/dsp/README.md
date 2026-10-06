@@ -10,9 +10,9 @@
 
 ## Аутентификация
 
-Все запросы требуют gRPC metadata:
-
-    api-key: ssp_dev_secret_key_12345
+Все запросы требуют metadata `api-key: ssp_dev_secret_key_777`.
+Без него — `Unauthenticated`. Если получил `Unauthenticated` с ключом —
+проверь, что значение совпадает с `DSP_API_KEYS` в `deployments/.env`.
 
 В Postman:
 - Вкладка **Metadata** → добавь `api-key` со значением из .env.
@@ -70,11 +70,11 @@
 | 10 | InvalidArgument: campaign_id is required |
 | 11 | InvalidArgument: price must be positive |
 | 12 | NotFound: campaign not found |
-| 13 | FailedPrecondition: insufficient budget |
+| 13 | FailedPrecondition: insufficient budget (нет резерва) |
 | 14 | OK, ok=true (требует GetBid 01) |
 | 15 | InvalidArgument: campaign_id is required |
 | 16 | NotFound: campaign not found |
-| 17 | FailedPrecondition: insufficient budget |
+| 17 | FailedPrecondition: insufficient budget (нет резерва) |
 
 ## ID из seed-данных
 
