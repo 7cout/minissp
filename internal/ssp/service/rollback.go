@@ -38,17 +38,20 @@ func (s *Service) processExpired(ctx context.Context) {
 	slog.InfoContext(ctx, "rolling back expired auctions", "count", len(expired))
 
 	for _, record := range expired {
-		// Извлекаем из маппинга, чтобы не обработать повторно.
-		s.takeAuction(record.AuctionID)
+		taken, ok := s.takeAuction(record.AuctionID)
+		if !ok {
+			// Запись уже забрана — Impression успел раньше, либо
+			// другой тик воркера её обработал. Пропускаем.
+			continue
+		}
 
-		if err := s.rollbackInBidder(ctx, record); err != nil {
+		if err := s.rollbackInBidder(ctx, taken); err != nil {
 			slog.WarnContext(ctx, "failed to rollback auction",
-				"auction_id", record.AuctionID,
-				"bidder", record.BidderID,
+				"auction_id", taken.AuctionID,
+				"bidder", taken.BidderID,
 				"error", err,
 			)
-			// При неудаче — возвращаем запись, попробуем снова.
-			s.storeAuction(record)
+			s.storeAuction(taken)
 		}
 	}
 }
