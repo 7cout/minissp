@@ -9,6 +9,8 @@ env:
 vars:
   MODULE_PATH: 'github.com/7cout/minissp'
   DATABASE_URL: 'postgres://{{.POSTGRES_USER}}:{{.POSTGRES_PASSWORD}}@{{.POSTGRES_HOST}}:{{.POSTGRES_PORT}}/{{.POSTGRES_DB}}?sslmode=disable'
+  TEST_POSTGRES_DB: '{{.TEST_POSTGRES_DB | default "minissp_test"}}'
+  TEST_DATABASE_URL: 'postgres://{{.POSTGRES_USER}}:{{.POSTGRES_PASSWORD}}@{{.POSTGRES_HOST}}:{{.POSTGRES_PORT}}/{{.TEST_POSTGRES_DB}}?sslmode=disable'
 
 tasks:
 
@@ -48,13 +50,31 @@ tasks:
       - go test -race -count=1 ./...
 
   test:integration:
-    desc: "Интеграционные тесты: Postgres + Redis"
+    desc: "Интеграционные тесты: Postgres + Redis (в отдельной БД)"
     dotenv: [deployments/.env]
     env:
-      DATABASE_URL: 'postgres://{{.POSTGRES_USER}}:{{.POSTGRES_PASSWORD}}@{{.POSTGRES_HOST}}:{{.POSTGRES_PORT}}/{{.POSTGRES_DB}}?sslmode=disable'
+      TEST_DATABASE_URL: '{{.TEST_DATABASE_URL}}'
       REDIS_ADDR: '{{.REDIS_ADDR | default "localhost:6379"}}'
     cmds:
+      - task: db:recreate:test
+      - task: migrate:up:test
       - go test -tags=integration -race -count=1 ./...
+      
+  # --- TEST DB ---
+
+  db:recreate:test:
+    desc: "Пересоздать тестовую БД (drop + create)"
+    dotenv: [deployments/.env]
+    cmds:
+      - docker exec minissp-postgres psql -U {{.POSTGRES_USER}} -d postgres -c "DROP DATABASE IF EXISTS {{.TEST_POSTGRES_DB}} WITH (FORCE)"
+      - docker exec minissp-postgres psql -U {{.POSTGRES_USER}} -d postgres -c "CREATE DATABASE {{.TEST_POSTGRES_DB}} OWNER {{.POSTGRES_USER}}"
+
+  migrate:up:test:
+    desc: "Применить миграции к тестовой БД (SSP + DSP)"
+    dotenv: [deployments/.env]
+    cmds:
+      - goose -dir internal/db/migrations/ssp -table goose_ssp postgres "{{.TEST_DATABASE_URL}}" up
+      - goose -dir internal/db/migrations/dsp -table goose_dsp postgres "{{.TEST_DATABASE_URL}}" up
 
   # --- MIGRATE ---
 

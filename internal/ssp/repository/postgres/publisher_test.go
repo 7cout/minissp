@@ -14,14 +14,18 @@ import (
 	"github.com/7cout/minissp/internal/ssp/domain"
 )
 
-// newTestPool подключается к Postgres из docker-compose и очищает
-// таблицы перед тестом. Если DATABASE_URL не задан — тест скипается.
+// newTestPool подключается к тестовой БД и очищает таблицы
+// перед тестом.
+//
+// Использует TEST_DATABASE_URL, а не DATABASE_URL — чтобы тесты
+// никогда не ходили в dev-базу. Если переменная не задана — тест
+// скипается.
 func newTestPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 
-	dsn := os.Getenv("DATABASE_URL")
+	dsn := os.Getenv("TEST_DATABASE_URL")
 	if dsn == "" {
-		t.Skip("DATABASE_URL not set, skipping integration test")
+		t.Skip("TEST_DATABASE_URL not set, skipping integration test")
 	}
 
 	pool, err := pgxpool.New(context.Background(), dsn)
