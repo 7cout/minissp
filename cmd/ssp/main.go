@@ -3,9 +3,20 @@
 // Хранилище выбирается env STORAGE: memory (по умолчанию) или postgres.
 // Для postgres seed не заливается автоматически — используй cmd/seed.
 //
-// Кэш слотов: NoopSlotCache для memory, RedisSlotCache для postgres.
-// Резервы аукционов: MemoryManager (in-memory) сейчас; RedisManager
-// будет добавлен следующим шагом.
+// Зависимости от STORAGE:
+//
+//	STORAGE=memory:
+//	  - репозитории: in-memory
+//	  - слоты в кэше: нет (NoopSlotCache)
+//	  - резервы: MemoryManager (живут в памяти процесса)
+//
+//	STORAGE=postgres:
+//	  - репозитории: PostgreSQL
+//	  - слоты в кэше: Redis (RedisSlotCache, TTL 5 минут)
+//	  - резервы: RedisManager (переживают рестарт, работают при нескольких инстансах)
+//
+// При STORAGE=postgres Redis обязателен: без него Impression не сможет
+// атомарно забрать запись, а воркер отката не увидит просроченные аукционы.
 package main
 
 import (
@@ -35,6 +46,7 @@ import (
 
 const (
 	defaultAddr     = ":50051"
+	defaultRedis    = "localhost:6379"
 	shutdownTimeout = 10 * time.Second
 	warmUpTimeout   = 3 * time.Second
 	slotCacheTTL    = 5 * time.Minute
@@ -145,66 +157,73 @@ type deps struct {
 func buildDeps(ctx context.Context) (deps, error) {
 	switch getEnv("STORAGE", "memory") {
 	case "postgres":
-		cfg := db.PostgresConfig{
-			Host:     getEnv("POSTGRES_HOST", "localhost"),
-			Port:     getEnv("POSTGRES_PORT", "5432"),
-			User:     getEnv("POSTGRES_USER", "minissp"),
-			Password: getEnv("POSTGRES_PASSWORD", ""),
-			Database: getEnv("POSTGRES_DB", "minissp"),
-		}
-		pool, err := db.NewPostgresPool(ctx, cfg)
-		if err != nil {
-			return deps{}, fmt.Errorf("postgres pool: %w", err)
-		}
-		slog.Info("storage: postgres")
-
-		slotCache, cacheCleanup := buildSlotCache(ctx)
-
-		return deps{
-			slots:      ssppostgres.NewSlotRepo(pool),
-			publishers: ssppostgres.NewPublisherRepo(pool),
-			slotCache:  slotCache,
-			reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
-			cleanup: func() {
-				cacheCleanup()
-				pool.Close()
-			},
-		}, nil
-
+		return buildPostgresDeps(ctx)
 	default:
-		slog.Info("storage: memory")
-		publishers := memory.NewPublisherRepo()
-		slots := memory.NewSlotRepo()
-		if err := seed.Populate(ctx, publishers, slots); err != nil {
-			return deps{}, fmt.Errorf("seed memory: %w", err)
-		}
-		slog.Info("seed data loaded", "publishers", 1, "slots", 1)
-
-		return deps{
-			slots:      slots,
-			publishers: publishers,
-			slotCache:  cache.NoopSlotCache{},
-			reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
-			cleanup:    func() {},
-		}, nil
+		return buildMemoryDeps(ctx)
 	}
 }
 
-// buildSlotCache подключается к Redis. Если недоступен — Noop.
-func buildSlotCache(ctx context.Context) (cache.SlotCache, func()) {
-	addr := getEnv("REDIS_ADDR", "localhost:6379")
-
-	client, err := db.NewRedisClient(ctx, db.RedisConfig{Addr: addr})
-	if err != nil {
-		slog.Warn("redis not available — slot cache disabled",
-			"addr", addr,
-			"error", err,
-		)
-		return cache.NoopSlotCache{}, func() {}
+// buildPostgresDeps собирает продакшен-конфигурацию: Postgres + Redis.
+//
+// Redis здесь обязателен. Если он недоступен — возвращаем ошибку,
+// чтобы сервис не стартовал в полурабочем состоянии. Иначе получится
+// SSP, который принимает RunAuction, но не может откатить просроченный
+// резерв при отсутствии Impression — деньги в DSP останутся заморожены.
+func buildPostgresDeps(ctx context.Context) (deps, error) {
+	pgCfg := db.PostgresConfig{
+		Host:     getEnv("POSTGRES_HOST", "localhost"),
+		Port:     getEnv("POSTGRES_PORT", "5432"),
+		User:     getEnv("POSTGRES_USER", "minissp"),
+		Password: getEnv("POSTGRES_PASSWORD", ""),
+		Database: getEnv("POSTGRES_DB", "minissp"),
 	}
+	pool, err := db.NewPostgresPool(ctx, pgCfg)
+	if err != nil {
+		return deps{}, fmt.Errorf("postgres pool: %w", err)
+	}
+	slog.Info("storage: postgres")
 
-	slog.Info("slot cache: redis", "addr", addr)
-	return cache.NewRedisSlotCache(client, slotCacheTTL), func() { _ = client.Close() }
+	redisAddr := getEnv("REDIS_ADDR", defaultRedis)
+	redisClient, err := db.NewRedisClient(ctx, db.RedisConfig{Addr: redisAddr})
+	if err != nil {
+		pool.Close()
+		return deps{}, fmt.Errorf("redis %s: %w", redisAddr, err)
+	}
+	slog.Info("redis ready", "addr", redisAddr)
+
+	return deps{
+		slots:      ssppostgres.NewSlotRepo(pool),
+		publishers: ssppostgres.NewPublisherRepo(pool),
+		slotCache:  cache.NewRedisSlotCache(redisClient, slotCacheTTL),
+		reserve:    reserve.NewRedis(redisClient, reserve.DefaultRedisOptions()),
+		cleanup: func() {
+			_ = redisClient.Close()
+			pool.Close()
+		},
+	}, nil
+}
+
+// buildMemoryDeps собирает dev-конфигурацию: всё в памяти.
+//
+// Redis не нужен — репозитории in-memory, резервы в MemoryManager,
+// кэш слотов отключён. Данные теряются при перезапуске сервиса.
+func buildMemoryDeps(ctx context.Context) (deps, error) {
+	slog.Info("storage: memory")
+
+	publishers := memory.NewPublisherRepo()
+	slots := memory.NewSlotRepo()
+	if err := seed.Populate(ctx, publishers, slots); err != nil {
+		return deps{}, fmt.Errorf("seed memory: %w", err)
+	}
+	slog.Info("seed data loaded", "publishers", 1, "slots", 1)
+
+	return deps{
+		slots:      slots,
+		publishers: publishers,
+		slotCache:  cache.NoopSlotCache{},
+		reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
+		cleanup:    func() {},
+	}, nil
 }
 
 // buildBidders создаёт gRPC-клиентов ко всем известным DSP
