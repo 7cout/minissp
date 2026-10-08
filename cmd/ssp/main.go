@@ -42,7 +42,9 @@ func run() error {
 	// 1. Memory-репозитории.
 	publishers := memory.NewPublisherRepo()
 	slots := memory.NewSlotRepo()
-	seed.PopulateMemory(publishers, slots)
+	if err := seed.PopulateMemory(ctx, publishers, slots); err != nil {
+		return fmt.Errorf("seed memory: %w", err)
+	}
 	slog.Info("seed data loaded", "publishers", 1, "slots", 1)
 
 	// 2. Клиенты к DSP.
@@ -116,7 +118,7 @@ func run() error {
 // buildBidders создаёт gRPC-клиентов ко всем известным DSP.
 //
 // Адреса и ключи берём из env. Пока сконфигурирован один DSP;
-// добавление второго — просто новая запись в configs.
+// добавление второго — новая запись в configs.
 func buildBidders() ([]service.BidderClient, error) {
 	type dspConfig struct {
 		name   string
@@ -136,7 +138,6 @@ func buildBidders() ([]service.BidderClient, error) {
 	for _, cfg := range configs {
 		c, err := bidder.NewClient(cfg.name, cfg.addr, cfg.apiKey)
 		if err != nil {
-			// Закрываем уже созданные клиенты при ошибке.
 			for _, cl := range clients {
 				_ = cl.Close()
 			}

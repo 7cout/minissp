@@ -22,7 +22,7 @@ func testPublisher(id, name, apiKey string, balance int64) *domain.Publisher {
 func TestPublisherRepo_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		repo := NewPublisherRepo()
-		repo.Add(testPublisher("pub_1", "T2", "key_1", 0))
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 0))
 
 		got, err := repo.Get(context.Background(), "pub_1")
 		if err != nil {
@@ -44,7 +44,7 @@ func TestPublisherRepo_Get(t *testing.T) {
 
 	t.Run("returns copy", func(t *testing.T) {
 		repo := NewPublisherRepo()
-		repo.Add(testPublisher("pub_1", "T2", "key_1", 100))
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 100))
 
 		got, _ := repo.Get(context.Background(), "pub_1")
 		got.Balance = 999
@@ -59,7 +59,7 @@ func TestPublisherRepo_Get(t *testing.T) {
 func TestPublisherRepo_GetByAPIKey(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		repo := NewPublisherRepo()
-		repo.Add(testPublisher("pub_1", "T2", "key_1", 0))
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 0))
 
 		got, err := repo.GetByAPIKey(context.Background(), "key_1")
 		if err != nil {
@@ -72,7 +72,7 @@ func TestPublisherRepo_GetByAPIKey(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		repo := NewPublisherRepo()
-		repo.Add(testPublisher("pub_1", "T2", "key_1", 0))
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 0))
 
 		_, err := repo.GetByAPIKey(context.Background(), "wrong_key")
 		if !errors.Is(err, domain.ErrPublisherNotFound) {
@@ -81,10 +81,64 @@ func TestPublisherRepo_GetByAPIKey(t *testing.T) {
 	})
 }
 
+func TestPublisherRepo_Add(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		repo := NewPublisherRepo()
+		err := repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 0))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		got, err := repo.Get(context.Background(), "pub_1")
+		if err != nil {
+			t.Fatalf("get: %v", err)
+		}
+		if got.APIKey != "key_1" {
+			t.Errorf("api key = %q, want key_1", got.APIKey)
+		}
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		repo := NewPublisherRepo()
+		err := repo.Add(context.Background(), testPublisher("", "T2", "key_1", 0))
+		if err == nil {
+			t.Error("want error for empty id, got nil")
+		}
+	})
+
+	t.Run("empty api key", func(t *testing.T) {
+		repo := NewPublisherRepo()
+		err := repo.Add(context.Background(), testPublisher("pub_1", "T2", "", 0))
+		if err == nil {
+			t.Error("want error for empty api key, got nil")
+		}
+	})
+
+	t.Run("duplicate id", func(t *testing.T) {
+		repo := NewPublisherRepo()
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 0))
+
+		err := repo.Add(context.Background(), testPublisher("pub_1", "Other", "key_2", 0))
+		if err == nil {
+			t.Error("want error for duplicate id, got nil")
+		}
+	})
+
+	t.Run("duplicate api key", func(t *testing.T) {
+		repo := NewPublisherRepo()
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 0))
+
+		err := repo.Add(context.Background(), testPublisher("pub_2", "Other", "key_1", 0))
+		if err == nil {
+			t.Error("want error for duplicate api key, got nil")
+		}
+	})
+}
+
 func TestPublisherRepo_AddBalance(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		repo := NewPublisherRepo()
-		repo.Add(testPublisher("pub_1", "T2", "key_1", 0))
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 0))
 
 		err := repo.AddBalance(context.Background(), "pub_1", 500)
 		if err != nil {
@@ -99,7 +153,7 @@ func TestPublisherRepo_AddBalance(t *testing.T) {
 
 	t.Run("multiple additions", func(t *testing.T) {
 		repo := NewPublisherRepo()
-		repo.Add(testPublisher("pub_1", "T2", "key_1", 100))
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 100))
 
 		_ = repo.AddBalance(context.Background(), "pub_1", 50)
 		_ = repo.AddBalance(context.Background(), "pub_1", 25)
@@ -121,7 +175,7 @@ func TestPublisherRepo_AddBalance(t *testing.T) {
 
 	t.Run("concurrent — all additions applied", func(t *testing.T) {
 		repo := NewPublisherRepo()
-		repo.Add(testPublisher("pub_1", "T2", "key_1", 0))
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 0))
 
 		const goroutines = 100
 		const amount = 10
@@ -145,7 +199,7 @@ func TestPublisherRepo_AddBalance(t *testing.T) {
 
 	t.Run("concurrent — with missing publisher", func(t *testing.T) {
 		repo := NewPublisherRepo()
-		repo.Add(testPublisher("pub_1", "T2", "key_1", 0))
+		_ = repo.Add(context.Background(), testPublisher("pub_1", "T2", "key_1", 0))
 
 		var wg sync.WaitGroup
 		var failed atomic.Int64

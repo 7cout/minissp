@@ -2,6 +2,8 @@ package memory
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/7cout/minissp/internal/ssp/domain"
@@ -23,11 +25,29 @@ func NewPublisherRepo() *PublisherRepo {
 }
 
 // Add добавляет издателя.
-func (r *PublisherRepo) Add(p *domain.Publisher) {
+//
+// Возвращает ошибку при пустом ID или дубликате api_key.
+func (r *PublisherRepo) Add(_ context.Context, p *domain.Publisher) error {
+	if strings.TrimSpace(p.ID) == "" {
+		return fmt.Errorf("publisher id is required")
+	}
+	if strings.TrimSpace(p.APIKey) == "" {
+		return fmt.Errorf("publisher api_key is required")
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if _, exists := r.byID[p.ID]; exists {
+		return fmt.Errorf("publisher with id %s already exists", p.ID)
+	}
+	if _, exists := r.byAPIKey[p.APIKey]; exists {
+		return fmt.Errorf("publisher with api_key already exists")
+	}
+
 	r.byID[p.ID] = p
 	r.byAPIKey[p.APIKey] = p
+	return nil
 }
 
 // Get возвращает издателя по ID.

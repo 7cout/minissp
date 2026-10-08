@@ -177,7 +177,7 @@ func TestService_ImpressionVsProcessExpired_Race(t *testing.T) {
 		bidder := testBidder("nike", "camp_nike", 5_000_000)
 		svc, slots, pubs := newTestService(bidder)
 		slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
-		pubs.Add(testPublisher("pub_1"))
+		addPublisher(t, pubs, testPublisher("pub_1"))
 
 		result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
 			RequestID: "req_1",

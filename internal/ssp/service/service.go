@@ -21,6 +21,7 @@ type SlotRepository interface {
 type PublisherRepository interface {
 	Get(ctx context.Context, id string) (*domain.Publisher, error)
 	GetByAPIKey(ctx context.Context, apiKey string) (*domain.Publisher, error)
+	Add(ctx context.Context, p *domain.Publisher) error
 	AddBalance(ctx context.Context, id string, amount int64) error
 }
 

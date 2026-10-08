@@ -30,6 +30,22 @@ func (f *fakeSlotRepo) Add(slot *domain.Slot) {
 	f.slots[slot.ID] = slot
 }
 
+func (f *fakeSlotRepo) AddIfAbsent(slot *domain.Slot) (*domain.Slot, bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	for _, s := range f.slots {
+		if s.PublisherID == slot.PublisherID && s.Name == slot.Name {
+			cp := *s
+			return &cp, false
+		}
+	}
+
+	f.slots[slot.ID] = slot
+	cp := *slot
+	return &cp, true
+}
+
 func (f *fakeSlotRepo) Get(_ context.Context, id string) (*domain.Slot, error) {
 	if f.getErr != nil {
 		return nil, f.getErr
@@ -87,27 +103,12 @@ func newFakePublisherRepo() *fakePublisherRepo {
 	}
 }
 
-func (f *fakePublisherRepo) Add(p *domain.Publisher) {
+func (f *fakePublisherRepo) Add(_ context.Context, p *domain.Publisher) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.byID[p.ID] = p
 	f.byAPIKey[p.APIKey] = p
-}
-
-func (f *fakeSlotRepo) AddIfAbsent(slot *domain.Slot) (*domain.Slot, bool) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	for _, s := range f.slots {
-		if s.PublisherID == slot.PublisherID && s.Name == slot.Name {
-			cp := *s
-			return &cp, false
-		}
-	}
-
-	f.slots[slot.ID] = slot
-	cp := *slot
-	return &cp, true
+	return nil
 }
 
 func (f *fakePublisherRepo) Get(_ context.Context, id string) (*domain.Publisher, error) {
@@ -245,6 +246,14 @@ func testPublisher(id string) *domain.Publisher {
 		ID:     id,
 		Name:   "Test Publisher",
 		APIKey: "test-key-" + id,
+	}
+}
+
+// addPublisher добавляет publisher и падает с t.Fatal при ошибке.
+func addPublisher(t *testing.T, repo *fakePublisherRepo, p *domain.Publisher) {
+	t.Helper()
+	if err := repo.Add(context.Background(), p); err != nil {
+		t.Fatalf("add publisher: %v", err)
 	}
 }
 

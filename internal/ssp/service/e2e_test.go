@@ -38,6 +38,7 @@ type e2eFixture struct {
 
 func newE2EFixture(t *testing.T) *e2eFixture {
 	t.Helper()
+	ctx := context.Background()
 
 	// --- DSP-сторона ---
 
@@ -77,7 +78,9 @@ func newE2EFixture(t *testing.T) *e2eFixture {
 
 	publishers := sspmemory.NewPublisherRepo()
 	slots := sspmemory.NewSlotRepo()
-	sspseed.PopulateMemory(publishers, slots)
+	if err := sspseed.PopulateMemory(ctx, publishers, slots); err != nil {
+		t.Fatalf("seed ssp: %v", err)
+	}
 
 	sspSvc := New(slots, publishers, []BidderClient{dspClient})
 	t.Cleanup(func() { _ = sspSvc.Close() })
