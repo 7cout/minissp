@@ -1,4 +1,7 @@
 // Command ssp запускает gRPC-сервер SSP (Supply-Side Platform).
+//
+// Хранилище выбирается env STORAGE: memory (по умолчанию) или postgres.
+// Для postgres seed не заливается автоматически — используй cmd/seed.
 package main
 
 import (
@@ -14,9 +17,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/7cout/minissp/internal/db"
 	"github.com/7cout/minissp/internal/ssp/bidder"
 	"github.com/7cout/minissp/internal/ssp/handler"
 	"github.com/7cout/minissp/internal/ssp/repository/memory"
+	ssppostgres "github.com/7cout/minissp/internal/ssp/repository/postgres"
 	"github.com/7cout/minissp/internal/ssp/seed"
 	"github.com/7cout/minissp/internal/ssp/service"
 	pb "github.com/7cout/minissp/proto/gen/ssp/v1"
@@ -26,6 +31,7 @@ const (
 	defaultAddr     = ":50051"
 	shutdownTimeout = 10 * time.Second
 	rollbackTick    = 5 * time.Second
+	warmUpTimeout   = 3 * time.Second
 )
 
 func main() {
@@ -39,16 +45,15 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// 1. Memory-репозитории.
-	publishers := memory.NewPublisherRepo()
-	slots := memory.NewSlotRepo()
-	if err := seed.PopulateMemory(ctx, publishers, slots); err != nil {
-		return fmt.Errorf("seed memory: %w", err)
+	// 1. Хранилище.
+	slots, publishers, cleanup, err := buildStorage(ctx)
+	if err != nil {
+		return fmt.Errorf("build storage: %w", err)
 	}
-	slog.Info("seed data loaded", "publishers", 1, "slots", 1)
+	defer cleanup()
 
 	// 2. Клиенты к DSP.
-	bidders, err := buildBidders()
+	bidders, err := buildBidders(ctx)
 	if err != nil {
 		return fmt.Errorf("build bidders: %w", err)
 	}
@@ -115,11 +120,56 @@ func run() error {
 	return nil
 }
 
-// buildBidders создаёт gRPC-клиентов ко всем известным DSP.
+// buildStorage выбирает реализацию репозиториев по env STORAGE.
 //
-// Адреса и ключи берём из env. Пока сконфигурирован один DSP;
-// добавление второго — новая запись в configs.
-func buildBidders() ([]service.BidderClient, error) {
+// Для memory заливает seed-данные при старте. Для postgres seed
+// не заливается — это отдельная команда cmd/seed.
+//
+// Возвращает slots, publishers и cleanup-функцию (закрыть пул).
+func buildStorage(ctx context.Context) (
+	service.SlotRepository,
+	service.PublisherRepository,
+	func(),
+	error,
+) {
+	switch getEnv("STORAGE", "memory") {
+	case "postgres":
+		cfg := db.PostgresConfig{
+			Host:     getEnv("POSTGRES_HOST", "localhost"),
+			Port:     getEnv("POSTGRES_PORT", "5432"),
+			User:     getEnv("POSTGRES_USER", "minissp"),
+			Password: getEnv("POSTGRES_PASSWORD", ""),
+			Database: getEnv("POSTGRES_DB", "minissp"),
+		}
+		pool, err := db.NewPostgresPool(ctx, cfg)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("postgres pool: %w", err)
+		}
+		slog.Info("storage: postgres")
+
+		slots := ssppostgres.NewSlotRepo(pool)
+		publishers := ssppostgres.NewPublisherRepo(pool)
+		return slots, publishers, pool.Close, nil
+
+	default:
+		slog.Info("storage: memory")
+		publishers := memory.NewPublisherRepo()
+		slots := memory.NewSlotRepo()
+		if err := seed.Populate(ctx, publishers, slots); err != nil {
+			return nil, nil, nil, fmt.Errorf("seed memory: %w", err)
+		}
+		slog.Info("seed data loaded", "publishers", 1, "slots", 1)
+		return slots, publishers, func() {}, nil
+	}
+}
+
+// buildBidders создаёт gRPC-клиентов ко всем известным DSP
+// и прогревает соединения.
+//
+// grpc.NewClient ленивый: реальное подключение устанавливается на
+// первом RPC. Без WarmUp первый RunAuction после старта SSP висит
+// на handshake до клиентского таймаута Publisher'а.
+func buildBidders(ctx context.Context) ([]service.BidderClient, error) {
 	type dspConfig struct {
 		name   string
 		addr   string
@@ -143,19 +193,34 @@ func buildBidders() ([]service.BidderClient, error) {
 			}
 			return nil, fmt.Errorf("create bidder %s: %w", cfg.name, err)
 		}
+
+		warmUpCtx, cancel := context.WithTimeout(ctx, warmUpTimeout)
+		err = c.WarmUp(warmUpCtx)
+		cancel()
+
+		if err != nil {
+			slog.Warn("dsp warm up failed — first RPC may be slow",
+				"dsp", cfg.name,
+				"addr", cfg.addr,
+				"error", err,
+			)
+		} else {
+			slog.Info("dsp connection ready", "dsp", cfg.name)
+		}
+
 		clients = append(clients, c)
 	}
 
 	return clients, nil
 }
 
-// publisherResolver адаптирует PublisherRepo к интерфейсу
+// publisherResolver адаптирует PublisherRepository к интерфейсу
 // handler.PublisherResolver.
 type publisherResolver struct {
-	repo *memory.PublisherRepo
+	repo service.PublisherRepository
 }
 
-func newPublisherResolver(repo *memory.PublisherRepo) *publisherResolver {
+func newPublisherResolver(repo service.PublisherRepository) *publisherResolver {
 	return &publisherResolver{repo: repo}
 }
 

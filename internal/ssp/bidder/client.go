@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -15,8 +18,18 @@ import (
 	pb "github.com/7cout/minissp/proto/gen/dsp/v1"
 )
 
-// apiKeyMetadata — имя поля в gRPC metadata для api-key.
-const apiKeyMetadata = "api-key"
+const (
+	// apiKeyMetadata — имя поля в gRPC metadata для api-key.
+	apiKeyMetadata = "api-key"
+
+	// rpcTimeout — таймаут на один RPC к DSP.
+	//
+	// В реальном RTB ответ нужен за ~100 мс, но у нас pet-проект
+	// и DSP живёт рядом. 2 секунды с большим запасом.
+	// Главное — не давать запросу висеть на клиентском ctx:
+	// тогда при недоступном DSP мы быстро узнаем об ошибке.
+	rpcTimeout = 2 * time.Second
+)
 
 // Client — gRPC-клиент к DSP.
 type Client struct {
@@ -62,11 +75,38 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
+// WarmUp форсирует установку gRPC-соединения.
+//
+// grpc.NewClient ленивый: соединение устанавливается при первом RPC.
+// Если это происходит во время RunAuction, первый запрос ждёт
+// TCP+HTTP/2 handshake и может упасть по клиентскому таймауту
+// (у Publisher он 10 секунд).
+//
+// WarmUp вызывается один раз при старте SSP: ждём Ready с коротким
+// таймаутом, логируем результат. Дальше первые RPC идут мгновенно.
+func (c *Client) WarmUp(ctx context.Context) error {
+	c.conn.Connect()
+
+	for {
+		state := c.conn.GetState()
+		slog.Info("dsp connection state", "dsp", c.name, "state", state.String())
+		if state == connectivity.Ready {
+			return nil
+		}
+		if !c.conn.WaitForStateChange(ctx, state) {
+			return ctx.Err()
+		}
+	}
+}
+
 // GetBid запрашивает ставку у DSP.
 //
 // Возвращает domain.ErrNoBids, если DSP отказался участвовать.
 // Возвращает прочие ошибки при проблемах с соединением.
 func (c *Client) GetBid(ctx context.Context, req domain.BidRequest, slot *domain.Slot) (*domain.Bid, error) {
+	ctx, cancel := context.WithTimeout(ctx, rpcTimeout)
+	defer cancel()
+
 	ctx = c.withAuth(ctx)
 
 	protoReq, err := toProtoBidRequest(req, slot)
@@ -88,6 +128,9 @@ func (c *Client) GetBid(ctx context.Context, req domain.BidRequest, slot *domain
 
 // Commit подтверждает списание после показа.
 func (c *Client) Commit(ctx context.Context, campaignID string, price int64) error {
+	ctx, cancel := context.WithTimeout(ctx, rpcTimeout)
+	defer cancel()
+
 	ctx = c.withAuth(ctx)
 
 	_, err := c.client.Commit(ctx, &pb.CommitRequest{
@@ -102,6 +145,9 @@ func (c *Client) Commit(ctx context.Context, campaignID string, price int64) err
 
 // Rollback отменяет резерв.
 func (c *Client) Rollback(ctx context.Context, campaignID string, price int64) error {
+	ctx, cancel := context.WithTimeout(ctx, rpcTimeout)
+	defer cancel()
+
 	ctx = c.withAuth(ctx)
 
 	_, err := c.client.Rollback(ctx, &pb.RollbackRequest{
