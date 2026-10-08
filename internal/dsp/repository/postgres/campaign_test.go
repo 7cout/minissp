@@ -101,7 +101,6 @@ func TestPostgresCampaignRepo_ListByGeo(t *testing.T) {
 	})
 
 	t.Run("filters out zero budget", func(t *testing.T) {
-		// Опустошаем одну из RU-кампаний через Reserve.
 		got, _ := campaigns.ListByGeo(ctx, "RU")
 		target := got[0]
 		_ = campaigns.Reserve(ctx, target.ID, target.BudgetRemaining)
@@ -162,52 +161,9 @@ func TestPostgresCampaignRepo_Reserve(t *testing.T) {
 			t.Errorf("want ErrInsufficientBudget, got %v", err)
 		}
 
-		// Бюджет не изменился.
 		got, _ := campaigns.Get(ctx, c.ID)
 		if got.BudgetRemaining != 1_000_000 {
 			t.Errorf("remaining = %d, want 1000000 (unchanged)", got.BudgetRemaining)
-		}
-	})
-}
-
-func TestPostgresCampaignRepo_Commit(t *testing.T) {
-	t.Run("success — reserved decreased, remaining unchanged", func(t *testing.T) {
-		pool := newTestPool(t)
-		advertisers := NewAdvertiserRepo(pool)
-		campaigns := NewCampaignRepo(pool)
-		ctx := context.Background()
-
-		adv := createTestAdvertiser(t, advertisers, 1_000_000_000)
-		c := testCampaign(adv.ID, "RU", 1_000_000)
-		_ = campaigns.Add(ctx, c)
-		_ = campaigns.Reserve(ctx, c.ID, 300_000)
-
-		if err := campaigns.Commit(ctx, c.ID, 300_000); err != nil {
-			t.Fatalf("commit: %v", err)
-		}
-
-		got, _ := campaigns.Get(ctx, c.ID)
-		if got.BudgetRemaining != 700_000 {
-			t.Errorf("remaining = %d, want 700000", got.BudgetRemaining)
-		}
-		if got.BudgetReserved != 0 {
-			t.Errorf("reserved = %d, want 0", got.BudgetReserved)
-		}
-	})
-
-	t.Run("insufficient reserved", func(t *testing.T) {
-		pool := newTestPool(t)
-		advertisers := NewAdvertiserRepo(pool)
-		campaigns := NewCampaignRepo(pool)
-		ctx := context.Background()
-
-		adv := createTestAdvertiser(t, advertisers, 1_000_000_000)
-		c := testCampaign(adv.ID, "RU", 1_000_000)
-		_ = campaigns.Add(ctx, c)
-
-		err := campaigns.Commit(ctx, c.ID, 100)
-		if !errors.Is(err, domain.ErrInsufficientBudget) {
-			t.Errorf("want ErrInsufficientBudget, got %v", err)
 		}
 	})
 }
@@ -239,7 +195,6 @@ func TestPostgresCampaignRepo_Rollback(t *testing.T) {
 }
 
 func TestPostgresCampaignRepo_Reserve_Concurrent(t *testing.T) {
-	// 200 горутин, бюджет хватает ровно на 100 Reserve.
 	pool := newTestPool(t)
 	advertisers := NewAdvertiserRepo(pool)
 	campaigns := NewCampaignRepo(pool)

@@ -49,7 +49,8 @@ func newE2EFixture(t *testing.T) *e2eFixture {
 		t.Fatalf("seed dsp: %v", err)
 	}
 
-	dspSvc := dspservice.New(dspCampaigns, dspCreatives, dspAdvertisers, 150)
+	dspTxManager := dspmemory.NewTxManager(dspCampaigns, dspAdvertisers)
+	dspSvc := dspservice.New(dspCampaigns, dspCreatives, dspTxManager, 150)
 	validator := dspHandler.NewStaticAPIKeyValidator([]string{e2eTestAPIKey})
 	grpcSrv := grpc.NewServer(
 		grpc.UnaryInterceptor(dspHandler.AuthInterceptor(validator)),

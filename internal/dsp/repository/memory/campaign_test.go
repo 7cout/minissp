@@ -22,7 +22,6 @@ func testCampaign(id, advertiserID, geo string, total int64) *domain.Campaign {
 	}
 }
 
-// addCampaign — helper: падает с t.Fatal при ошибке Add.
 func addCampaign(t *testing.T, repo *CampaignRepo, c *domain.Campaign) {
 	t.Helper()
 	if err := repo.Add(context.Background(), c); err != nil {
@@ -118,7 +117,7 @@ func TestCampaignRepo_ListByGeo(t *testing.T) {
 }
 
 func TestCampaignRepo_Reserve(t *testing.T) {
-	t.Run("success — budget updated correctly", func(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
 		repo := NewCampaignRepo()
 		addCampaign(t, repo, testCampaign("c1", "adv_1", "RU", 1_000_000))
 
@@ -133,9 +132,6 @@ func TestCampaignRepo_Reserve(t *testing.T) {
 		}
 		if c.BudgetReserved != 300_000 {
 			t.Errorf("reserved = %d, want 300000", c.BudgetReserved)
-		}
-		if c.BudgetRemaining+c.BudgetReserved != c.BudgetTotal {
-			t.Errorf("invariant violated")
 		}
 	})
 
@@ -158,47 +154,8 @@ func TestCampaignRepo_Reserve(t *testing.T) {
 	})
 }
 
-func TestCampaignRepo_Commit(t *testing.T) {
-	t.Run("success — reserved decreased, remaining unchanged", func(t *testing.T) {
-		repo := NewCampaignRepo()
-		addCampaign(t, repo, testCampaign("c1", "adv_1", "RU", 1_000_000))
-		_ = repo.Reserve(context.Background(), "c1", 300_000)
-
-		err := repo.Commit(context.Background(), "c1", 300_000)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		c, _ := repo.Get(context.Background(), "c1")
-		if c.BudgetRemaining != 700_000 {
-			t.Errorf("remaining = %d, want 700000", c.BudgetRemaining)
-		}
-		if c.BudgetReserved != 0 {
-			t.Errorf("reserved = %d, want 0", c.BudgetReserved)
-		}
-	})
-
-	t.Run("not found", func(t *testing.T) {
-		repo := NewCampaignRepo()
-		err := repo.Commit(context.Background(), "missing", 100)
-		if !errors.Is(err, domain.ErrCampaignNotFound) {
-			t.Errorf("want ErrCampaignNotFound, got %v", err)
-		}
-	})
-
-	t.Run("insufficient reserved", func(t *testing.T) {
-		repo := NewCampaignRepo()
-		addCampaign(t, repo, testCampaign("c1", "adv_1", "RU", 1_000_000))
-
-		err := repo.Commit(context.Background(), "c1", 100)
-		if !errors.Is(err, domain.ErrInsufficientBudget) {
-			t.Errorf("want ErrInsufficientBudget, got %v", err)
-		}
-	})
-}
-
 func TestCampaignRepo_Rollback(t *testing.T) {
-	t.Run("success — reserved decreased, remaining restored", func(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
 		repo := NewCampaignRepo()
 		addCampaign(t, repo, testCampaign("c1", "adv_1", "RU", 1_000_000))
 		_ = repo.Reserve(context.Background(), "c1", 300_000)
@@ -224,6 +181,16 @@ func TestCampaignRepo_Rollback(t *testing.T) {
 			t.Errorf("want ErrCampaignNotFound, got %v", err)
 		}
 	})
+
+	t.Run("insufficient reserved", func(t *testing.T) {
+		repo := NewCampaignRepo()
+		addCampaign(t, repo, testCampaign("c1", "adv_1", "RU", 1_000_000))
+
+		err := repo.Rollback(context.Background(), "c1", 100)
+		if !errors.Is(err, domain.ErrInsufficientBudget) {
+			t.Errorf("want ErrInsufficientBudget, got %v", err)
+		}
+	})
 }
 
 func TestCampaignRepo_Reserve_Concurrent(t *testing.T) {
@@ -232,7 +199,7 @@ func TestCampaignRepo_Reserve_Concurrent(t *testing.T) {
 		addCampaign(t, repo, testCampaign("c1", "adv_1", "RU", 1_000))
 
 		const goroutines = 200
-		const amount = 10 // хватит ровно на 100
+		const amount = 10
 
 		var wg sync.WaitGroup
 		var succeeded atomic.Int64
@@ -258,17 +225,6 @@ func TestCampaignRepo_Reserve_Concurrent(t *testing.T) {
 		}
 		if c.BudgetReserved != 1_000 {
 			t.Errorf("reserved = %d, want 1000", c.BudgetReserved)
-		}
-	})
-
-	t.Run("insufficient reserved", func(t *testing.T) {
-		repo := NewCampaignRepo()
-		addCampaign(t, repo, testCampaign("c1", "adv_1", "RU", 1_000_000))
-
-		// Без резерва — пытаемся откатить 100.
-		err := repo.Rollback(context.Background(), "c1", 100)
-		if !errors.Is(err, domain.ErrInsufficientBudget) {
-			t.Errorf("want ErrInsufficientBudget, got %v", err)
 		}
 	})
 }

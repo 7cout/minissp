@@ -1,6 +1,4 @@
 // Command dsp запускает gRPC-сервер DSP (эмулятор Demand-Side Platform).
-//
-// Пока использует in-memory репозитории — PostgreSQL и Redis будут позже.
 package main
 
 import (
@@ -55,14 +53,16 @@ func run() error {
 		"creatives", len(seed.CreativeIDs()),
 	)
 
+	txManager := memory.NewTxManager(campaigns, advertisers)
+
 	// Стратегия ставки — из env, дефолт 150%.
 	multiplier := getEnvInt("DSP_BID_MULTIPLIER_PERCENT", 150)
 
 	// Сервис DSP.
-	svc := service.New(campaigns, creatives, advertisers, multiplier)
+	svc := service.New(campaigns, creatives, txManager, multiplier)
 
-	// 2.5. API-key аутентификация.
-	apiKeys := splitEnvList("DSP_API_KEYS") // разделённые запятыми
+	// API-key аутентификация.
+	apiKeys := splitEnvList("DSP_API_KEYS")
 	validator := handler.NewStaticAPIKeyValidator(apiKeys)
 	if len(apiKeys) == 0 {
 		slog.Warn("DSP_API_KEYS is empty — authentication is DISABLED")
@@ -77,14 +77,12 @@ func run() error {
 	pb.RegisterDspServiceServer(grpcServer, handler.NewDspServer(svc))
 	reflection.Register(grpcServer)
 
-	// Слушаем.
 	addr := getEnv("DSP_ADDR", defaultAddr)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", addr, err)
 	}
 
-	// Запуск.
 	errCh := make(chan error, 1)
 	go func() {
 		slog.Info("DSP gRPC server listening",
@@ -96,7 +94,6 @@ func run() error {
 		}
 	}()
 
-	// Ждём сигнала или ошибки.
 	select {
 	case <-ctx.Done():
 		slog.Info("shutdown signal received")
@@ -104,7 +101,6 @@ func run() error {
 		return err
 	}
 
-	// Graceful shutdown.
 	done := make(chan struct{})
 	go func() {
 		grpcServer.GracefulStop()
@@ -138,7 +134,6 @@ func getEnvInt(key string, fallback int64) int64 {
 	return fallback
 }
 
-// splitEnvList читает переменную окружения и разделяет её по запятой.
 func splitEnvList(key string) []string {
 	v := os.Getenv(key)
 	if v == "" {

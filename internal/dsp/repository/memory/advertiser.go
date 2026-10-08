@@ -23,8 +23,6 @@ func NewAdvertiserRepo() *AdvertiserRepo {
 }
 
 // Add добавляет рекламодателя.
-//
-// Возвращает ошибку при пустом ID или дубликате.
 func (r *AdvertiserRepo) Add(_ context.Context, a *domain.Advertiser) error {
 	if strings.TrimSpace(a.ID) == "" {
 		return fmt.Errorf("advertiser id is required")
@@ -42,13 +40,6 @@ func (r *AdvertiserRepo) Add(_ context.Context, a *domain.Advertiser) error {
 }
 
 // Get возвращает рекламодателя по ID.
-//
-// Возвращает domain.ErrAdvertiserNotFound, если не найден.
-// Возвращает копию.
-//
-// ВНИМАНИЕ: domain.Advertiser сейчас состоит только из value-полей,
-// поэтому shallow copy безопасно. Если добавятся указатели или слайсы —
-// надо заменить на .Clone() (см. domain.Creative.Clone).
 func (r *AdvertiserRepo) Get(_ context.Context, id string) (*domain.Advertiser, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -61,13 +52,11 @@ func (r *AdvertiserRepo) Get(_ context.Context, id string) (*domain.Advertiser, 
 	return &cp, nil
 }
 
-// Spend списывает amount с баланса рекламодателя.
+// spendLocked списывает amount с баланса advertiser'а без взятия мьютекса.
 //
-// Возвращает ErrAdvertiserNotFound или ErrInsufficientBalance.
-func (r *AdvertiserRepo) Spend(_ context.Context, id string, amount int64) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
+// Вызывается только из TxManager.CommitWithSpend, который уже держит
+// r.mu.
+func (r *AdvertiserRepo) spendLocked(id string, amount int64) error {
 	a, ok := r.advertisers[id]
 	if !ok {
 		return domain.ErrAdvertiserNotFound

@@ -23,9 +23,8 @@ func TestService_GetBid(t *testing.T) {
 				"camp_1": {testBannerCreative("cr_1", "camp_1", 320, 50)},
 			},
 		}
-		advertisers := &fakeAdvertiserRepo{}
 
-		svc := New(campaigns, creatives, advertisers, 150)
+		svc := New(campaigns, creatives, &fakeTxManager{}, 150)
 
 		bid, err := svc.GetBid(context.Background(), testBidRequest())
 		if err != nil {
@@ -66,7 +65,7 @@ func TestService_GetBid(t *testing.T) {
 		}
 		creatives := &fakeCreativeRepo{creatives: map[string][]domain.Creative{}}
 
-		svc := New(campaigns, creatives, &fakeAdvertiserRepo{}, 150)
+		svc := New(campaigns, creatives, &fakeTxManager{}, 150)
 
 		_, err := svc.GetBid(context.Background(), testBidRequest())
 		if !errors.Is(err, domain.ErrNoEligibleCampaign) {
@@ -89,7 +88,7 @@ func TestService_GetBid(t *testing.T) {
 			},
 		}
 
-		svc := New(campaigns, creatives, &fakeAdvertiserRepo{}, 150)
+		svc := New(campaigns, creatives, &fakeTxManager{}, 150)
 
 		_, err := svc.GetBid(context.Background(), testBidRequest())
 		if !errors.Is(err, domain.ErrNoEligibleCampaign) {
@@ -128,7 +127,7 @@ func TestService_GetBid(t *testing.T) {
 				},
 			},
 		}
-		svc := New(campaigns, creatives, &fakeAdvertiserRepo{}, 150)
+		svc := New(campaigns, creatives, &fakeTxManager{}, 150)
 
 		_, err := svc.GetBid(context.Background(), testBidRequest())
 		if !errors.Is(err, domain.ErrNoEligibleCampaign) {
@@ -159,7 +158,7 @@ func TestService_GetBid(t *testing.T) {
 				},
 			},
 		}
-		svc := New(campaigns, creatives, &fakeAdvertiserRepo{}, 150)
+		svc := New(campaigns, creatives, &fakeTxManager{}, 150)
 
 		_, err := svc.GetBid(context.Background(), testBidRequest())
 		if !errors.Is(err, domain.ErrNoEligibleCampaign) {
@@ -169,7 +168,7 @@ func TestService_GetBid(t *testing.T) {
 
 	t.Run("list campaigns fails", func(t *testing.T) {
 		campaigns := &fakeCampaignRepo{listErr: errors.New("db error")}
-		svc := New(campaigns, &fakeCreativeRepo{}, &fakeAdvertiserRepo{}, 150)
+		svc := New(campaigns, &fakeCreativeRepo{}, &fakeTxManager{}, 150)
 
 		_, err := svc.GetBid(context.Background(), testBidRequest())
 		if err == nil {
@@ -187,7 +186,7 @@ func TestService_GetBid(t *testing.T) {
 			},
 		}
 		creatives := &fakeCreativeRepo{err: errors.New("db error")}
-		svc := New(campaigns, creatives, &fakeAdvertiserRepo{}, 150)
+		svc := New(campaigns, creatives, &fakeTxManager{}, 150)
 
 		_, err := svc.GetBid(context.Background(), testBidRequest())
 		if err == nil {
@@ -217,7 +216,7 @@ func TestService_GetBid(t *testing.T) {
 				"camp_2": {testBannerCreative("cr_2", "camp_2", 320, 50)},
 			},
 		}
-		svc := New(campaigns, creatives, &fakeAdvertiserRepo{}, 150)
+		svc := New(campaigns, creatives, &fakeTxManager{}, 150)
 
 		bid, err := svc.GetBid(context.Background(), testBidRequest())
 		if err != nil {
@@ -248,7 +247,7 @@ func TestService_GetBid(t *testing.T) {
 				"camp_1": {testBannerCreative("cr_1", "camp_1", 320, 50)},
 			},
 		}
-		svc := New(campaigns, creatives, &fakeAdvertiserRepo{}, 150)
+		svc := New(campaigns, creatives, &fakeTxManager{}, 150)
 
 		_, err := svc.GetBid(context.Background(), testBidRequest())
 		if err == nil {
@@ -273,7 +272,7 @@ func TestService_GetBid(t *testing.T) {
 				"camp_1": {testBannerCreative("cr_1", "camp_1", 320, 50)},
 			},
 		}
-		svc := New(campaigns, creatives, &fakeAdvertiserRepo{}, 150)
+		svc := New(campaigns, creatives, &fakeTxManager{}, 150)
 
 		req := testBidRequest()
 		req.BidFloor = 0

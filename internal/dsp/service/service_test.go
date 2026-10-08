@@ -14,18 +14,12 @@ type fakeCampaignRepo struct {
 
 	getErr      error
 	listErr     error
-	commitErr   error
 	rollbackErr error
-	uncommitErr error
 
-	// reserveErrByID — ошибка для конкретной кампании.
-	// Если ID нет в map — Reserve успешен.
 	reserveErrByID map[string]error
 
-	reserved    []call
-	committed   []call
-	rolledBack  []call
-	uncommitted []call
+	reserved   []call
+	rolledBack []call
 }
 
 type call struct {
@@ -61,27 +55,11 @@ func (f *fakeCampaignRepo) Reserve(_ context.Context, campaignID string, amount 
 	return nil
 }
 
-func (f *fakeCampaignRepo) Commit(_ context.Context, campaignID string, amount int64) error {
-	if f.commitErr != nil {
-		return f.commitErr
-	}
-	f.committed = append(f.committed, call{campaignID, amount})
-	return nil
-}
-
 func (f *fakeCampaignRepo) Rollback(_ context.Context, campaignID string, amount int64) error {
 	if f.rollbackErr != nil {
 		return f.rollbackErr
 	}
 	f.rolledBack = append(f.rolledBack, call{campaignID, amount})
-	return nil
-}
-
-func (f *fakeCampaignRepo) Uncommit(_ context.Context, campaignID string, amount int64) error {
-	if f.uncommitErr != nil {
-		return f.uncommitErr
-	}
-	f.uncommitted = append(f.uncommitted, call{campaignID, amount})
 	return nil
 }
 
@@ -99,32 +77,18 @@ func (f *fakeCreativeRepo) ListByCampaign(_ context.Context, campaignID string) 
 	return f.creatives[campaignID], nil
 }
 
-// --- Fake: AdvertiserRepository ---
+// --- Fake: TransactionManager ---
 
-type fakeAdvertiserRepo struct {
-	advertisers map[string]*domain.Advertiser
-	getErr      error
-	spendErr    error
-	spent       []call
+type fakeTxManager struct {
+	commitErr   error
+	commitCalls []call
 }
 
-func (f *fakeAdvertiserRepo) Get(_ context.Context, id string) (*domain.Advertiser, error) {
-	if f.getErr != nil {
-		return nil, f.getErr
+func (f *fakeTxManager) CommitWithSpend(_ context.Context, campaignID string, price int64) error {
+	if f.commitErr != nil {
+		return f.commitErr
 	}
-	a, ok := f.advertisers[id]
-	if !ok {
-		return nil, domain.ErrAdvertiserNotFound
-	}
-	cp := *a
-	return &cp, nil
-}
-
-func (f *fakeAdvertiserRepo) Spend(_ context.Context, id string, amount int64) error {
-	if f.spendErr != nil {
-		return f.spendErr
-	}
-	f.spent = append(f.spent, call{id, amount})
+	f.commitCalls = append(f.commitCalls, call{campaignID, price})
 	return nil
 }
 
@@ -168,12 +132,4 @@ func testBannerCreative(id, campaignID string, w, h int) domain.Creative {
 func testCampaignPtr(id, advertiserID, geo string) *domain.Campaign {
 	c := testCampaign(id, advertiserID, geo)
 	return &c
-}
-
-func testAdvertiser(id string, balance int64) *domain.Advertiser {
-	return &domain.Advertiser{
-		ID:      id,
-		Name:    "Test Advertiser",
-		Balance: balance,
-	}
 }

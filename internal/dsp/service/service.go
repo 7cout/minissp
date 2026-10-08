@@ -7,13 +7,14 @@ import (
 )
 
 // CampaignRepository — доступ к кампаниям.
+//
+// Commit и Uncommit убраны: атомарная связка «снять резерв +
+// списать с advertiser'а» вынесена в TransactionManager.
 type CampaignRepository interface {
 	Get(ctx context.Context, id string) (*domain.Campaign, error)
 	ListByGeo(ctx context.Context, geo string) ([]domain.Campaign, error)
 	Reserve(ctx context.Context, campaignID string, amount int64) error
-	Commit(ctx context.Context, campaignID string, amount int64) error
 	Rollback(ctx context.Context, campaignID string, amount int64) error
-	Uncommit(ctx context.Context, campaignID string, amount int64) error
 }
 
 // CreativeRepository — доступ к креативам.
@@ -21,21 +22,23 @@ type CreativeRepository interface {
 	ListByCampaign(ctx context.Context, campaignID string) ([]domain.Creative, error)
 }
 
-// AdvertiserRepository — доступ к рекламодателям.
-type AdvertiserRepository interface {
-	Get(ctx context.Context, id string) (*domain.Advertiser, error)
-	Spend(ctx context.Context, id string, amount int64) error
+// TransactionManager выполняет составные операции в одной транзакции.
+type TransactionManager interface {
+	// CommitWithSpend атомарно снимает резерв с кампании и списывает
+	// деньги с её advertiser'а.
+	//
+	// Возможные ошибки: ErrCampaignNotFound, ErrInsufficientBudget,
+	// ErrAdvertiserNotFound, ErrInsufficientBalance.
+	CommitWithSpend(ctx context.Context, campaignID string, price int64) error
 }
 
 // Service — сервис DSP.
 type Service struct {
-	campaigns   CampaignRepository
-	creatives   CreativeRepository
-	advertisers AdvertiserRepository
+	campaigns CampaignRepository
+	creatives CreativeRepository
+	txManager TransactionManager
 
 	// bidMultiplierPercent — насколько DSP готов поставить больше floor.
-	// Например, 150 = готов платить в 1.5 раза больше минимальной цены.
-	// Разные значения — разные стратегии у разных DSP.
 	bidMultiplierPercent int64
 }
 
@@ -43,13 +46,13 @@ type Service struct {
 func New(
 	campaigns CampaignRepository,
 	creatives CreativeRepository,
-	advertisers AdvertiserRepository,
+	txManager TransactionManager,
 	bidMultiplierPercent int64,
 ) *Service {
 	return &Service{
 		campaigns:            campaigns,
 		creatives:            creatives,
-		advertisers:          advertisers,
+		txManager:            txManager,
 		bidMultiplierPercent: bidMultiplierPercent,
 	}
 }

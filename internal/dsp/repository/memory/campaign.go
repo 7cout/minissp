@@ -42,13 +42,6 @@ func (r *CampaignRepo) Add(_ context.Context, c *domain.Campaign) error {
 }
 
 // Get возвращает кампанию по ID.
-//
-// Возвращает domain.ErrCampaignNotFound, если не найдена.
-// Возвращает копию — вызывающий не может изменить данные в обход мьютекса.
-//
-// ВНИМАНИЕ: domain.Campaign сейчас состоит только из value-полей,
-// поэтому shallow copy безопасно. Если добавятся указатели или слайсы —
-// надо заменить на .Clone() (см. domain.Creative.Clone).
 func (r *CampaignRepo) Get(_ context.Context, id string) (*domain.Campaign, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -81,9 +74,6 @@ func (r *CampaignRepo) ListByGeo(_ context.Context, geo string) ([]domain.Campai
 }
 
 // Reserve резервирует amount на бюджете кампании.
-//
-// Уменьшает budget_remaining, увеличивает budget_reserved.
-// Возвращает ErrCampaignNotFound или ErrInsufficientBudget.
 func (r *CampaignRepo) Reserve(_ context.Context, campaignID string, amount int64) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -97,43 +87,6 @@ func (r *CampaignRepo) Reserve(_ context.Context, campaignID string, amount int6
 	}
 
 	c.BudgetRemaining -= amount
-	c.BudgetReserved += amount
-	return nil
-}
-
-// Commit подтверждает списание резерва кампании.
-//
-// Уменьшает budget_reserved. НЕ списывает с advertiser —
-// за это отвечает AdvertiserRepo.Spend, который вызывает сервис.
-func (r *CampaignRepo) Commit(_ context.Context, campaignID string, amount int64) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	c, ok := r.campaigns[campaignID]
-	if !ok {
-		return domain.ErrCampaignNotFound
-	}
-	if c.BudgetReserved < amount {
-		return domain.ErrInsufficientBudget
-	}
-
-	c.BudgetReserved -= amount
-	return nil
-}
-
-// Uncommit отменяет Commit — возвращает деньги в budget_reserved.
-//
-// Используется сервисом для компенсации, если после успешного
-// Commit не удалось списать деньги с advertiser'а.
-func (r *CampaignRepo) Uncommit(_ context.Context, campaignID string, amount int64) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	c, ok := r.campaigns[campaignID]
-	if !ok {
-		return domain.ErrCampaignNotFound
-	}
-
 	c.BudgetReserved += amount
 	return nil
 }
@@ -154,4 +107,22 @@ func (r *CampaignRepo) Rollback(_ context.Context, campaignID string, amount int
 	c.BudgetReserved -= amount
 	c.BudgetRemaining += amount
 	return nil
+}
+
+// commitLocked снимает резерв с кампании без взятия мьютекса.
+//
+// Вызывается только из TxManager.CommitWithSpend, который уже держит
+// r.mu. Возвращает advertiser_id кампании, чтобы TxManager знал,
+// с кого списывать деньги.
+func (r *CampaignRepo) commitLocked(campaignID string, amount int64) (advertiserID string, err error) {
+	c, ok := r.campaigns[campaignID]
+	if !ok {
+		return "", domain.ErrCampaignNotFound
+	}
+	if c.BudgetReserved < amount {
+		return "", domain.ErrInsufficientBudget
+	}
+
+	c.BudgetReserved -= amount
+	return c.AdvertiserID, nil
 }

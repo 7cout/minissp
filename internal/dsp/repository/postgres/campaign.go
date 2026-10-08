@@ -45,8 +45,6 @@ func (r *CampaignRepo) Get(ctx context.Context, id string) (*domain.Campaign, er
 }
 
 // ListByGeo возвращает кампании, подходящие по гео с доступным бюджетом.
-//
-// Использует partial-индекс idx_campaigns_geo_with_budget.
 func (r *CampaignRepo) ListByGeo(ctx context.Context, geo string) ([]domain.Campaign, error) {
 	const q = `
 		SELECT id, advertiser_id, name,
@@ -79,9 +77,6 @@ func (r *CampaignRepo) ListByGeo(ctx context.Context, geo string) ([]domain.Camp
 }
 
 // Add добавляет кампанию.
-//
-// Не идемпотентен: повторный вызов с тем же id вернёт unique violation.
-// Используется только из seed.
 func (r *CampaignRepo) Add(ctx context.Context, c *domain.Campaign) error {
 	const q = `
 		INSERT INTO dsp.campaigns (
@@ -102,13 +97,6 @@ func (r *CampaignRepo) Add(ctx context.Context, c *domain.Campaign) error {
 }
 
 // Reserve резервирует amount на бюджете кампании.
-//
-// Атомарный UPDATE с условием budget_remaining >= amount в WHERE:
-// никакой гонки между SELECT и UPDATE.
-//
-// Возвращает:
-//   - ErrCampaignNotFound, если кампании нет;
-//   - ErrInsufficientBudget, если remaining не хватает.
 func (r *CampaignRepo) Reserve(ctx context.Context, campaignID string, amount int64) error {
 	const q = `
 		UPDATE dsp.campaigns
@@ -121,34 +109,6 @@ func (r *CampaignRepo) Reserve(ctx context.Context, campaignID string, amount in
 	tag, err := r.pool.Exec(ctx, q, campaignID, amount)
 	if err != nil {
 		return fmt.Errorf("reserve campaign %s: %w", campaignID, err)
-	}
-	if tag.RowsAffected() == 1 {
-		return nil
-	}
-
-	// Либо кампании нет, либо бюджета не хватило.
-	return r.distinguishBudgetError(ctx, campaignID)
-}
-
-// Commit снимает резерв с бюджета кампании.
-//
-// Уменьшает budget_reserved. Списывает ли деньги с advertiser —
-// решает сервис (в транзакции при переходе на full-Postgres режим).
-//
-// Возвращает:
-//   - ErrCampaignNotFound, если кампании нет;
-//   - ErrInsufficientBudget, если reserved не хватает.
-func (r *CampaignRepo) Commit(ctx context.Context, campaignID string, amount int64) error {
-	const q = `
-		UPDATE dsp.campaigns
-		SET budget_reserved = budget_reserved - $2,
-		    updated_at      = now()
-		WHERE id = $1 AND budget_reserved >= $2
-	`
-
-	tag, err := r.pool.Exec(ctx, q, campaignID, amount)
-	if err != nil {
-		return fmt.Errorf("commit campaign %s: %w", campaignID, err)
 	}
 	if tag.RowsAffected() == 1 {
 		return nil
@@ -178,33 +138,8 @@ func (r *CampaignRepo) Rollback(ctx context.Context, campaignID string, amount i
 	return r.distinguishBudgetError(ctx, campaignID)
 }
 
-// Uncommit возвращает деньги в reserved (компенсация после неудачного Spend).
-//
-// Существует только для in-memory паритета: пока DSP.Commit не переведён
-// на полноценную транзакцию, сервис использует Uncommit для отката.
-// После перехода на транзакцию метод будет удалён из интерфейса.
-func (r *CampaignRepo) Uncommit(ctx context.Context, campaignID string, amount int64) error {
-	const q = `
-		UPDATE dsp.campaigns
-		SET budget_reserved = budget_reserved + $2,
-		    updated_at      = now()
-		WHERE id = $1
-	`
-
-	tag, err := r.pool.Exec(ctx, q, campaignID, amount)
-	if err != nil {
-		return fmt.Errorf("uncommit campaign %s: %w", campaignID, err)
-	}
-	if tag.RowsAffected() == 0 {
-		return domain.ErrCampaignNotFound
-	}
-	return nil
-}
-
 // distinguishBudgetError определяет, почему UPDATE не сработал:
 // кампании нет или денег не хватило.
-//
-// Второй round-trip только в редком пути ошибки — цена ошибки ок.
 func (r *CampaignRepo) distinguishBudgetError(ctx context.Context, campaignID string) error {
 	const q = `SELECT 1 FROM dsp.campaigns WHERE id = $1`
 
