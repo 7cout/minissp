@@ -78,7 +78,7 @@ func newE2EFixture(t *testing.T) *e2eFixture {
 
 	publishers := sspmemory.NewPublisherRepo()
 	slots := sspmemory.NewSlotRepo()
-	if err := sspseed.PopulateMemory(ctx, publishers, slots); err != nil {
+	if err := sspseed.Populate(ctx, publishers, slots); err != nil {
 		t.Fatalf("seed ssp: %v", err)
 	}
 
