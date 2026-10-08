@@ -19,6 +19,7 @@ import (
 	"github.com/7cout/minissp/internal/ssp/cache"
 	"github.com/7cout/minissp/internal/ssp/domain"
 	sspmemory "github.com/7cout/minissp/internal/ssp/repository/memory"
+	"github.com/7cout/minissp/internal/ssp/reserve"
 	sspseed "github.com/7cout/minissp/internal/ssp/seed"
 	dsppb "github.com/7cout/minissp/proto/gen/dsp/v1"
 )
@@ -93,6 +94,7 @@ func newE2EFixture(t *testing.T) *e2eFixture {
 		Publishers: publishers,
 		Bidders:    []BidderClient{dspClient},
 		SlotCache:  cache.NewMemorySlotCache(time.Minute),
+		Reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
 	})
 	t.Cleanup(func() { _ = sspSvc.Close() })
 
@@ -106,16 +108,17 @@ func newE2EFixture(t *testing.T) *e2eFixture {
 }
 
 // campaignIDOfRecord — возвращает campaign_id из AuctionRecord,
-// не удаляя запись из svc.auctions. Используется до Impression.
+// не удаляя запись из резерва. Используется до Impression.
 func (f *e2eFixture) campaignIDOfRecord(t *testing.T, auctionID string) string {
 	t.Helper()
 
-	f.ssp.mu.RLock()
-	defer f.ssp.mu.RUnlock()
-
-	rec, ok := f.ssp.auctions[auctionID]
+	mgr, ok := f.ssp.reserve.(*reserve.MemoryManager)
 	if !ok {
-		t.Fatalf("auction record %q not found", auctionID)
+		t.Fatalf("reserve is %T, want *reserve.MemoryManager", f.ssp.reserve)
+	}
+	rec, err := mgr.Peek(context.Background(), auctionID)
+	if err != nil {
+		t.Fatalf("peek auction %q: %v", auctionID, err)
 	}
 	return rec.CampaignID
 }

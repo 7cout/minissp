@@ -152,7 +152,7 @@ func TestService_Impression_CommitFails(t *testing.T) {
 	}
 
 	// Запись должна вернуться — можно повторить.
-	if _, ok := svc.takeAuction(result.AuctionID); !ok {
+	if !mustMemoryReserve(t, svc).Contains(result.AuctionID) {
 		t.Error("auction record should be restored for retry")
 	}
 }
@@ -188,7 +188,7 @@ func TestService_Impression_PublisherNotFound_NoCommit(t *testing.T) {
 	}
 
 	// Запись должна вернуться — можно повторить после починки данных.
-	if _, ok := svc.takeAuction(result.AuctionID); !ok {
+	if !mustMemoryReserve(t, svc).Contains(result.AuctionID) {
 		t.Error("auction record should be restored")
 	}
 }
@@ -228,9 +228,13 @@ func TestService_Impression_AddBalanceFails_ProcessedStays(t *testing.T) {
 		t.Errorf("second impression should be no-op, got %v", err)
 	}
 
-	// И записи в auctions больше нет — она «зафиксирована» как обработанная.
-	if _, ok := svc.takeAuction(result.AuctionID); ok {
-		t.Error("auction should not be in auctions map after failed AddBalance")
+	// И записи в резерве больше нет — она «зафиксирована» как обработанная.
+	mgr := mustMemoryReserve(t, svc)
+	if mgr.Contains(result.AuctionID) {
+		t.Error("auction should not be in reserve after failed AddBalance")
+	}
+	if !mgr.IsProcessed(result.AuctionID) {
+		t.Error("auction should be marked as processed")
 	}
 }
 

@@ -3,11 +3,10 @@ package service
 import (
 	"context"
 	"errors"
-	"sync"
-	"time"
 
 	"github.com/7cout/minissp/internal/ssp/cache"
 	"github.com/7cout/minissp/internal/ssp/domain"
+	"github.com/7cout/minissp/internal/ssp/reserve"
 )
 
 // SlotRepository — доступ к слотам.
@@ -35,28 +34,16 @@ type BidderClient interface {
 	Close() error
 }
 
-const (
-	// CommissionPercent — комиссия платформы.
-	CommissionPercent int64 = 20
-
-	// AuctionTTL — сколько живёт запись аукциона до автоотката.
-	AuctionTTL = 30 * time.Second
-
-	// ProcessedTTL — сколько храним ID обработанных impression
-	// для идемпотентности.
-	ProcessedTTL = 10 * time.Minute
-)
+// CommissionPercent — комиссия платформы.
+const CommissionPercent int64 = 20
 
 // Options — зависимости сервиса SSP.
-//
-// Именованные поля вместо позиционных аргументов: конструктор
-// не разрастается при добавлении новых зависимостей (метрики,
-// reserve manager и т.д.), вызовы в тестах читаются понятнее.
 type Options struct {
 	Slots      SlotRepository
 	Publishers PublisherRepository
 	Bidders    []BidderClient
 	SlotCache  cache.SlotCache
+	Reserve    reserve.Manager
 }
 
 // Service — сервис SSP.
@@ -64,18 +51,15 @@ type Service struct {
 	slots      SlotRepository
 	publishers PublisherRepository
 	bidders    []BidderClient
-	biddersBy  map[string]BidderClient // name → client, для быстрого поиска
+	biddersBy  map[string]BidderClient
 	slotCache  cache.SlotCache
-
-	mu        sync.RWMutex
-	auctions  map[string]domain.AuctionRecord
-	processed map[string]time.Time // auction_id → когда обработан
+	reserve    reserve.Manager
 }
 
 // New создаёт сервис SSP.
 //
-// Если SlotCache не задан — используется NoopSlotCache,
-// сервис работает без кэша.
+// Если SlotCache не задан — используется NoopSlotCache.
+// Reserve обязателен.
 func New(opts Options) *Service {
 	by := make(map[string]BidderClient, len(opts.Bidders))
 	for _, b := range opts.Bidders {
@@ -93,8 +77,7 @@ func New(opts Options) *Service {
 		bidders:    opts.Bidders,
 		biddersBy:  by,
 		slotCache:  slotCache,
-		auctions:   make(map[string]domain.AuctionRecord),
-		processed:  make(map[string]time.Time),
+		reserve:    opts.Reserve,
 	}
 }
 

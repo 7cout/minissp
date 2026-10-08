@@ -4,8 +4,8 @@
 // Для postgres seed не заливается автоматически — используй cmd/seed.
 //
 // Кэш слотов: NoopSlotCache для memory, RedisSlotCache для postgres.
-// Если Redis недоступен — сервис стартует с NoopSlotCache
-// и предупреждением в логах.
+// Резервы аукционов: MemoryManager (in-memory) сейчас; RedisManager
+// будет добавлен следующим шагом.
 package main
 
 import (
@@ -27,6 +27,7 @@ import (
 	"github.com/7cout/minissp/internal/ssp/handler"
 	"github.com/7cout/minissp/internal/ssp/repository/memory"
 	ssppostgres "github.com/7cout/minissp/internal/ssp/repository/postgres"
+	"github.com/7cout/minissp/internal/ssp/reserve"
 	"github.com/7cout/minissp/internal/ssp/seed"
 	"github.com/7cout/minissp/internal/ssp/service"
 	pb "github.com/7cout/minissp/proto/gen/ssp/v1"
@@ -35,7 +36,6 @@ import (
 const (
 	defaultAddr     = ":50051"
 	shutdownTimeout = 10 * time.Second
-	rollbackTick    = 5 * time.Second
 	warmUpTimeout   = 3 * time.Second
 	slotCacheTTL    = 5 * time.Minute
 )
@@ -51,7 +51,7 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// 1. Хранилище + кэш.
+	// 1. Зависимости: репозитории, кэш, резервы.
 	d, err := buildDeps(ctx)
 	if err != nil {
 		return fmt.Errorf("build deps: %w", err)
@@ -71,6 +71,7 @@ func run() error {
 		Publishers: d.publishers,
 		Bidders:    bidders,
 		SlotCache:  d.slotCache,
+		Reserve:    d.reserve,
 	})
 	defer func() {
 		if err := svc.Close(); err != nil {
@@ -78,8 +79,8 @@ func run() error {
 		}
 	}()
 
-	// 4. Rollback worker.
-	svc.StartRollbackWorker(ctx, rollbackTick)
+	// 4. Worker отката просроченных резервов.
+	svc.StartReserveWorker(ctx)
 
 	// 5. gRPC-сервер с auth interceptor.
 	authResolver := newPublisherResolver(d.publishers)
@@ -136,16 +137,11 @@ type deps struct {
 	slots      service.SlotRepository
 	publishers service.PublisherRepository
 	slotCache  cache.SlotCache
+	reserve    reserve.Manager
 	cleanup    func()
 }
 
-// buildDeps выбирает реализацию репозиториев и кэша по env STORAGE.
-//
-// memory: репозиторий в памяти, seed заливается при старте,
-// slot cache не нужен (Noop).
-//
-// postgres: репозиторий в Postgres, seed — отдельной командой,
-// slot cache — Redis (если доступен, иначе Noop с warning).
+// buildDeps выбирает реализацию репозиториев, кэша и резервов по env STORAGE.
 func buildDeps(ctx context.Context) (deps, error) {
 	switch getEnv("STORAGE", "memory") {
 	case "postgres":
@@ -168,6 +164,7 @@ func buildDeps(ctx context.Context) (deps, error) {
 			slots:      ssppostgres.NewSlotRepo(pool),
 			publishers: ssppostgres.NewPublisherRepo(pool),
 			slotCache:  slotCache,
+			reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
 			cleanup: func() {
 				cacheCleanup()
 				pool.Close()
@@ -187,16 +184,13 @@ func buildDeps(ctx context.Context) (deps, error) {
 			slots:      slots,
 			publishers: publishers,
 			slotCache:  cache.NoopSlotCache{},
+			reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
 			cleanup:    func() {},
 		}, nil
 	}
 }
 
-// buildSlotCache подключается к Redis.
-//
-// Если Redis недоступен — не блокируем запуск SSP: логируем warning
-// и возвращаем NoopSlotCache. Бизнес продолжит работать через
-// Postgres, просто без кэша.
+// buildSlotCache подключается к Redis. Если недоступен — Noop.
 func buildSlotCache(ctx context.Context) (cache.SlotCache, func()) {
 	addr := getEnv("REDIS_ADDR", "localhost:6379")
 

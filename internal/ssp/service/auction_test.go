@@ -35,10 +35,7 @@ func TestService_RunAuction_HappyPath_SecondPrice(t *testing.T) {
 	}
 
 	// Проверяем сохранённую запись.
-	rec, ok := svc.takeAuction(result.AuctionID)
-	if !ok {
-		t.Fatal("auction record not stored")
-	}
+	rec := peekRecord(t, svc, result.AuctionID)
 	if rec.CampaignID != "camp_nike" {
 		t.Errorf("campaign = %q, want camp_nike", rec.CampaignID)
 	}
@@ -69,7 +66,7 @@ func TestService_RunAuction_SingleBid_UsesFloor(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	rec, _ := svc.takeAuction(result.AuctionID)
+	rec := peekRecord(t, svc, result.AuctionID)
 	if rec.Price != slot.MinPrice {
 		t.Errorf("price = %d, want floor=%d", rec.Price, slot.MinPrice)
 	}
@@ -92,7 +89,7 @@ func TestService_RunAuction_TwoBids_SecondBelowFloor(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	rec, _ := svc.takeAuction(result.AuctionID)
+	rec := peekRecord(t, svc, result.AuctionID)
 	if rec.Price != slot.MinPrice {
 		t.Errorf("price = %d, want floor=%d", rec.Price, slot.MinPrice)
 	}
@@ -114,7 +111,7 @@ func TestService_RunAuction_EqualBids_FirstWins(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	rec, _ := svc.takeAuction(result.AuctionID)
+	rec := peekRecord(t, svc, result.AuctionID)
 	if rec.Price != 5_000_000 {
 		t.Errorf("price = %d, want 5000000", rec.Price)
 	}
@@ -167,7 +164,7 @@ func TestService_RunAuction_OneFailsOthersSucceed(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	rec, _ := svc.takeAuction(result.AuctionID)
+	rec := peekRecord(t, svc, result.AuctionID)
 	if rec.BidderID != "adidas" {
 		t.Errorf("bidder = %q, want adidas", rec.BidderID)
 	}

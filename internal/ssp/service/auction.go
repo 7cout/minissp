@@ -60,7 +60,9 @@ func (s *Service) RunAuction(ctx context.Context, req domain.BidRequest) (*domai
 		return nil, fmt.Errorf("invalid auction record: %w", err)
 	}
 
-	s.storeAuction(record)
+	if err := s.reserve.Reserve(ctx, record); err != nil {
+		return nil, fmt.Errorf("reserve auction: %w", err)
+	}
 
 	return &domain.AuctionResult{
 		AuctionID:   auctionID,
@@ -154,86 +156,4 @@ func selectWinner(bids []bidWithSource, bidFloor int64) (bidWithSource, int64) {
 		price = bidFloor
 	}
 	return winner, price
-}
-
-// storeAuction сохраняет запись аукциона.
-func (s *Service) storeAuction(record domain.AuctionRecord) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.auctions[record.AuctionID] = record
-}
-
-// takeAuction извлекает запись и удаляет её.
-func (s *Service) takeAuction(auctionID string) (domain.AuctionRecord, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	record, ok := s.auctions[auctionID]
-	if !ok {
-		return domain.AuctionRecord{}, false
-	}
-	delete(s.auctions, auctionID)
-	return record, true
-}
-
-// listExpiredAuctions возвращает записи старше AuctionTTL.
-func (s *Service) listExpiredAuctions(now time.Time) []domain.AuctionRecord {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	var expired []domain.AuctionRecord
-	for _, r := range s.auctions {
-		if now.Sub(r.CreatedAt) > AuctionTTL {
-			expired = append(expired, r)
-		}
-	}
-	return expired
-}
-
-// takeForImpression атомарно проверяет, что auctionID ещё не обработан,
-// забирает запись из auctions и сразу помечает как обработанный.
-//
-// Возвращает:
-//   - (record, false, nil)             — запись взята, можно обрабатывать;
-//   - (_, true, nil)                   — auctionID уже обработан (идемпотентный повтор);
-//   - (_, false, ErrAuctionNotFound)   — записи нет.
-//
-// Помечаем processed ДО Commit, чтобы параллельный вызов увидел
-// метку и вернул nil, а не гонялся за той же записью.
-func (s *Service) takeForImpression(auctionID string) (domain.AuctionRecord, bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, ok := s.processed[auctionID]; ok {
-		return domain.AuctionRecord{}, true, nil
-	}
-
-	record, ok := s.auctions[auctionID]
-	if !ok {
-		return domain.AuctionRecord{}, false, domain.ErrAuctionNotFound
-	}
-
-	delete(s.auctions, auctionID)
-	s.processed[auctionID] = time.Now()
-	return record, false, nil
-}
-
-// unmarkProcessed снимает метку processed — вызывается, если Commit
-// упал и Impression надо повторить.
-func (s *Service) unmarkProcessed(auctionID string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.processed, auctionID)
-}
-
-// cleanProcessed удаляет записи старше ProcessedTTL.
-func (s *Service) cleanProcessed(now time.Time) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	for id, ts := range s.processed {
-		if now.Sub(ts) > ProcessedTTL {
-			delete(s.processed, id)
-		}
-	}
 }

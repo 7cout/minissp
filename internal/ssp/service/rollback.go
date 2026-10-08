@@ -3,57 +3,38 @@ package service
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"github.com/7cout/minissp/internal/ssp/domain"
 )
 
-// StartRollbackWorker запускает фоновую задачу:
-//   - откатывает просроченные аукционы в DSP;
-//   - чистит старые записи об обработанных impression.
-func (s *Service) StartRollbackWorker(ctx context.Context, interval time.Duration) {
-	ticker := time.NewTicker(interval)
-	go func() {
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				slog.Info("rollback worker stopped")
-				return
-			case <-ticker.C:
-				s.processExpired(ctx)
-				s.cleanProcessed(time.Now())
-			}
-		}
-	}()
-}
-
-// processExpired откатывает просроченные аукционы.
-func (s *Service) processExpired(ctx context.Context) {
-	expired := s.listExpiredAuctions(time.Now())
-	if len(expired) == 0 {
-		return
-	}
-
-	slog.InfoContext(ctx, "rolling back expired auctions", "count", len(expired))
-
-	for _, record := range expired {
-		taken, ok := s.takeAuction(record.AuctionID)
-		if !ok {
-			// Запись уже забрана — Impression успел раньше, либо
-			// другой тик воркера её обработал. Пропускаем.
-			continue
-		}
-
-		if err := s.rollbackInBidder(ctx, taken); err != nil {
+// StartReserveWorker запускает обработку просроченных резервов.
+//
+// Делегирует в reserve.Manager.Subscribe: для memory — тикер,
+// сканирующий карту; для Redis — подписка на expired-события.
+// Не блокирует: воркер работает в фоне до отмены ctx.
+func (s *Service) StartReserveWorker(ctx context.Context) {
+	s.reserve.Subscribe(ctx, func(record domain.AuctionRecord) error {
+		if err := s.rollbackInBidder(ctx, record); err != nil {
 			slog.WarnContext(ctx, "failed to rollback auction",
-				"auction_id", taken.AuctionID,
-				"bidder", taken.BidderID,
+				"auction_id", record.AuctionID,
+				"bidder", record.BidderID,
 				"error", err,
 			)
-			s.storeAuction(taken)
+			return err
 		}
-	}
+		return nil
+	})
+}
+
+// TickReserve обрабатывает просроченные резервы синхронно.
+//
+// В проде откат делает воркер через StartReserveWorker. Этот метод
+// используется в тестах и для ручной отладки, чтобы не ждать
+// следующего тика.
+func (s *Service) TickReserve(ctx context.Context) {
+	s.reserve.Tick(ctx, func(record domain.AuctionRecord) error {
+		return s.rollbackInBidder(ctx, record)
+	})
 }
 
 // rollbackInBidder отправляет Rollback конкретному биддеру.

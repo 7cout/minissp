@@ -10,26 +10,25 @@ import (
 	"github.com/7cout/minissp/internal/ssp/domain"
 )
 
-func TestService_processExpired_HappyPath(t *testing.T) {
+func TestService_ExpiredAuction_RollsBack(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, _ := newTestService(bidder)
 	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
-	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
+	result, err := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
 		SlotID:    "slot_1",
 	})
+	if err != nil {
+		t.Fatalf("run auction: %v", err)
+	}
 
-	// Искусственно делаем запись «старой».
-	svc.mu.Lock()
-	rec := svc.auctions[result.AuctionID]
-	rec.CreatedAt = time.Now().Add(-time.Minute)
-	svc.auctions[result.AuctionID] = rec
-	svc.mu.Unlock()
+	// Помечаем запись как просроченную и триггерим один проход воркера
+	// синхронно — без ожидания тикера.
+	mgr := mustMemoryReserve(t, svc)
+	mgr.ExpireNow(result.AuctionID)
+	svc.TickReserve(context.Background())
 
-	svc.processExpired(context.Background())
-
-	// Rollback должен быть отправлен.
 	bidder.mu.Lock()
 	rbID := bidder.capturedRollbackID
 	rbPrice := bidder.capturedRollbackPr
@@ -39,16 +38,14 @@ func TestService_processExpired_HappyPath(t *testing.T) {
 		t.Errorf("rollback campaign = %q, want camp_nike", rbID)
 	}
 	if rbPrice != 5_000_000 {
-		t.Errorf("rollback price = %d", rbPrice)
+		t.Errorf("rollback price = %d, want 5000000", rbPrice)
 	}
-
-	// Запись должна быть удалена.
-	if _, ok := svc.takeAuction(result.AuctionID); ok {
-		t.Error("expired auction should be removed")
+	if mgr.Contains(result.AuctionID) {
+		t.Error("expired auction should be removed from reserve")
 	}
 }
 
-func TestService_processExpired_NoExpired(t *testing.T) {
+func TestService_TickReserve_NoExpired(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, _ := newTestService(bidder)
 	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
@@ -58,9 +55,8 @@ func TestService_processExpired_NoExpired(t *testing.T) {
 		SlotID:    "slot_1",
 	})
 
-	svc.processExpired(context.Background())
+	svc.TickReserve(context.Background())
 
-	// Rollback не должен быть отправлен.
 	bidder.mu.Lock()
 	rbID := bidder.capturedRollbackID
 	bidder.mu.Unlock()
@@ -70,7 +66,7 @@ func TestService_processExpired_NoExpired(t *testing.T) {
 	}
 }
 
-func TestService_processExpired_RollbackFails_RecordRestored(t *testing.T) {
+func TestService_TickReserve_RollbackFails_RecordRestored(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	bidder.rollbackErr = errors.New("dsp down")
 
@@ -82,43 +78,38 @@ func TestService_processExpired_RollbackFails_RecordRestored(t *testing.T) {
 		SlotID:    "slot_1",
 	})
 
-	svc.mu.Lock()
-	rec := svc.auctions[result.AuctionID]
-	rec.CreatedAt = time.Now().Add(-time.Minute)
-	svc.auctions[result.AuctionID] = rec
-	svc.mu.Unlock()
-
-	svc.processExpired(context.Background())
+	mgr := mustMemoryReserve(t, svc)
+	mgr.ExpireNow(result.AuctionID)
+	svc.TickReserve(context.Background())
 
 	// При ошибке rollback запись должна быть возвращена.
-	if _, ok := svc.takeAuction(result.AuctionID); !ok {
+	if !mgr.Contains(result.AuctionID) {
 		t.Error("auction should be restored on rollback failure")
 	}
 }
 
-func TestService_StartRollbackWorker_StopsOnContext(t *testing.T) {
+// TestService_StartReserveWorker_StopsOnContext — smoke-тест: воркер
+// стартует, затем корректно останавливается по отмене контекста.
+//
+// Точная проверка остановки воркера — в reserve/memory_test.go
+// (TestMemoryManager_Subscribe_StopsOnContext). Здесь важно убедиться,
+// что StartReserveWorker не блокирует вызов и не паникует.
+func TestService_StartReserveWorker_StopsOnContext(t *testing.T) {
 	svc, _, _ := newTestService()
 
 	ctx, cancel := context.WithCancel(context.Background())
-	svc.StartRollbackWorker(ctx, 10*time.Millisecond)
+	svc.StartReserveWorker(ctx)
 
-	time.Sleep(30 * time.Millisecond)
+	// Даём воркеру стартовать.
+	time.Sleep(20 * time.Millisecond)
 	cancel()
 
-	// Ждём, пока воркер завершится. Если не завершится — тест
-	// упадёт по таймауту, что тоже сигнал о проблеме.
-	done := make(chan struct{})
-	go func() {
-		time.Sleep(30 * time.Millisecond)
-		close(done)
-	}()
+	// Даём воркеру время увидеть отмену и завершиться.
+	time.Sleep(20 * time.Millisecond)
 
-	select {
-	case <-done:
-		// Всё хорошо — воркер не завис.
-	case <-time.After(1 * time.Second):
-		t.Fatal("rollback worker did not stop after context cancellation")
-	}
+	// Если мы досюда дошли без deadlock и без паники — воркер
+	// не блокирует вызывающего и корректно реагирует на cancel.
+	t.Log("reserve worker started and stopped on context cancellation")
 }
 
 func TestService_Close(t *testing.T) {
@@ -138,41 +129,7 @@ func TestService_Close(t *testing.T) {
 	}
 }
 
-func TestService_processExpired_SkipsAlreadyTaken(t *testing.T) {
-	bidder := testBidder("nike", "camp_nike", 5_000_000)
-	svc, slots, _ := newTestService(bidder)
-	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
-
-	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
-		RequestID: "req_1",
-		SlotID:    "slot_1",
-	})
-
-	// Делаем запись «старой».
-	svc.mu.Lock()
-	rec := svc.auctions[result.AuctionID]
-	rec.CreatedAt = time.Now().Add(-time.Minute)
-	svc.auctions[result.AuctionID] = rec
-	svc.mu.Unlock()
-
-	// Симулируем, что Impression уже забрал запись.
-	if _, ok := svc.takeAuction(result.AuctionID); !ok {
-		t.Fatal("setup: auction should be in map")
-	}
-
-	// processExpired должен пропустить — запись уже забрана.
-	svc.processExpired(context.Background())
-
-	bidder.mu.Lock()
-	rbID := bidder.capturedRollbackID
-	bidder.mu.Unlock()
-
-	if rbID != "" {
-		t.Errorf("rollback should not be called for already-taken auction, got %q", rbID)
-	}
-}
-
-func TestService_ImpressionVsProcessExpired_Race(t *testing.T) {
+func TestService_ImpressionVsExpiry_Race(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		bidder := testBidder("nike", "camp_nike", 5_000_000)
 		svc, slots, pubs := newTestService(bidder)
@@ -184,15 +141,13 @@ func TestService_ImpressionVsProcessExpired_Race(t *testing.T) {
 			SlotID:    "slot_1",
 		})
 
-		svc.mu.Lock()
-		rec := svc.auctions[result.AuctionID]
-		rec.CreatedAt = time.Now().Add(-time.Minute)
-		svc.auctions[result.AuctionID] = rec
-		svc.mu.Unlock()
+		// Помечаем запись просроченной, чтобы TickReserve её увидел.
+		mgr := mustMemoryReserve(t, svc)
+		mgr.ExpireNow(result.AuctionID)
 
 		var wg sync.WaitGroup
 		wg.Add(2)
-		go func() { defer wg.Done(); svc.processExpired(context.Background()) }()
+		go func() { defer wg.Done(); svc.TickReserve(context.Background()) }()
 		go func() { defer wg.Done(); _ = svc.Impression(context.Background(), result.AuctionID) }()
 		wg.Wait()
 

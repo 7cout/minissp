@@ -8,6 +8,7 @@ import (
 
 	"github.com/7cout/minissp/internal/ssp/cache"
 	"github.com/7cout/minissp/internal/ssp/domain"
+	"github.com/7cout/minissp/internal/ssp/reserve"
 )
 
 // --- fakeSlotRepo ---
@@ -344,7 +345,35 @@ func newTestService(bidders ...*fakeBidder) (*Service, *fakeSlotRepo, *fakePubli
 		Publishers: pubs,
 		Bidders:    clientList,
 		SlotCache:  newFakeSlotCache(),
+		Reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
 	}), slots, pubs
+}
+
+// --- helpers доступа к reserve для тестов ---
+
+// mustMemoryReserve достаёт *reserve.MemoryManager из сервиса.
+//
+// В тестах мы всегда собираем сервис с MemoryManager — если тут что-то
+// не так, это ошибка в самом тесте, валим сразу.
+func mustMemoryReserve(t *testing.T, svc *Service) *reserve.MemoryManager {
+	t.Helper()
+	mgr, ok := svc.reserve.(*reserve.MemoryManager)
+	if !ok {
+		t.Fatalf("reserve is %T, want *reserve.MemoryManager", svc.reserve)
+	}
+	return mgr
+}
+
+// peekRecord возвращает AuctionRecord из резерва без изъятия.
+//
+// Если записи нет — t.Fatal.
+func peekRecord(t *testing.T, svc *Service, auctionID string) domain.AuctionRecord {
+	t.Helper()
+	rec, err := mustMemoryReserve(t, svc).Peek(context.Background(), auctionID)
+	if err != nil {
+		t.Fatalf("peek auction %q: %v", auctionID, err)
+	}
+	return rec
 }
 
 func TestService_RegisterSlot_Concurrent(t *testing.T) {
