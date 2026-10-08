@@ -60,7 +60,8 @@ func (r *SlotRepo) AddIfAbsent(_ context.Context, slot *domain.Slot) (*domain.Sl
 
 	for _, s := range r.slots {
 		if s.PublisherID == slot.PublisherID && s.Name == slot.Name {
-			return cloneSlot(s), false, nil
+			cp := s.Clone()
+			return &cp, false, nil
 		}
 	}
 
@@ -69,7 +70,8 @@ func (r *SlotRepo) AddIfAbsent(_ context.Context, slot *domain.Slot) (*domain.Sl
 	}
 
 	r.slots[slot.ID] = slot
-	return cloneSlot(slot), true, nil
+	cp := slot.Clone()
+	return &cp, true, nil
 }
 
 // Get возвращает слот по ID.
@@ -84,7 +86,8 @@ func (r *SlotRepo) Get(_ context.Context, id string) (*domain.Slot, error) {
 	if !ok {
 		return nil, domain.ErrSlotNotFound
 	}
-	return cloneSlot(slot), nil
+	cp := slot.Clone()
+	return &cp, nil
 }
 
 // GetByName возвращает слот по publisher_id и имени.
@@ -97,33 +100,9 @@ func (r *SlotRepo) GetByName(_ context.Context, publisherID, name string) (*doma
 
 	for _, slot := range r.slots {
 		if slot.PublisherID == publisherID && slot.Name == name {
-			return cloneSlot(slot), nil
+			cp := slot.Clone()
+			return &cp, nil
 		}
 	}
 	return nil, domain.ErrSlotNotFound
-}
-
-// cloneSlot создаёт глубокую копию слота, включая вложенные параметры.
-func cloneSlot(s *domain.Slot) *domain.Slot {
-	cp := *s
-	if s.Banner != nil {
-		b := *s.Banner
-		cp.Banner = &b
-	}
-	if s.Video != nil {
-		v := *s.Video
-		if s.Video.MIMEs != nil {
-			v.MIMEs = append([]string(nil), s.Video.MIMEs...)
-		}
-		cp.Video = &v
-	}
-	if s.Native != nil {
-		n := *s.Native
-		cp.Native = &n
-	}
-	if s.Audio != nil {
-		a := *s.Audio
-		cp.Audio = &a
-	}
-	return &cp
 }

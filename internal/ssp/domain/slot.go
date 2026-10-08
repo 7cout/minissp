@@ -84,3 +84,34 @@ func (s Slot) validateParams() error {
 	}
 	return nil
 }
+
+// Clone возвращает глубокую копию слота.
+//
+// Копирует вложенные структуры (Banner, Video, Native, Audio) и слайс
+// MIMEs. Нужен, чтобы репозитории и кэш не отдавали наружу указатели
+// на своё хранилище.
+func (s Slot) Clone() Slot {
+	cp := s
+
+	if s.Banner != nil {
+		b := *s.Banner
+		cp.Banner = &b
+	}
+	if s.Video != nil {
+		v := *s.Video
+		if s.Video.MIMEs != nil {
+			v.MIMEs = append([]string(nil), s.Video.MIMEs...)
+		}
+		cp.Video = &v
+	}
+	if s.Native != nil {
+		n := *s.Native
+		cp.Native = &n
+	}
+	if s.Audio != nil {
+		a := *s.Audio
+		cp.Audio = &a
+	}
+
+	return cp
+}
