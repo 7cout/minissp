@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 	"time"
+
+	sspmetrics "github.com/7cout/minissp/internal/ssp/metrics"
 )
 
 // WorkerConfig — параметры воркера.
@@ -79,9 +81,6 @@ func (w *Worker) Tick(ctx context.Context) {
 		slog.WarnContext(ctx, "events: fetch unpublished failed", "error", err)
 		return
 	}
-	if len(records) == 0 {
-		return
-	}
 
 	published := 0
 	for _, r := range records {
@@ -92,6 +91,7 @@ func (w *Worker) Tick(ctx context.Context) {
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 				return
 			}
+			sspmetrics.EventsPublishErrorsTotal.Inc()
 			slog.WarnContext(ctx, "events: publish failed",
 				"id", r.ID,
 				"topic", r.Topic,
@@ -117,6 +117,15 @@ func (w *Worker) Tick(ctx context.Context) {
 	}
 
 	if published > 0 {
+		sspmetrics.EventsPublishedTotal.Add(float64(published))
 		slog.InfoContext(ctx, "events: batch published", "count", published)
+	}
+
+	// Обновляем gauge после обработки.
+	//
+	// Делаем это всегда, даже если пачка была пустой — вдруг
+	// предыдущий тик не смог обновить.
+	if n, err := w.store.CountUnpublished(ctx); err == nil {
+		sspmetrics.EventsUnpublished.Set(float64(n))
 	}
 }

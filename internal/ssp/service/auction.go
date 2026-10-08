@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/7cout/minissp/internal/ssp/domain"
+	sspmetrics "github.com/7cout/minissp/internal/ssp/metrics"
 )
 
 // bidWithSource — ставка вместе с биддером, который её прислал.
@@ -21,6 +22,11 @@ type bidWithSource struct {
 
 // RunAuction проводит аукцион second-price для указанного слота.
 func (s *Service) RunAuction(ctx context.Context, req domain.BidRequest) (*domain.AuctionResult, error) {
+	start := time.Now()
+	defer func() {
+		sspmetrics.AuctionDuration.Observe(time.Since(start).Seconds())
+	}()
+
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid bid request: %w", err)
 	}

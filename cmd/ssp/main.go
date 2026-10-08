@@ -37,6 +37,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/7cout/minissp/internal/db"
+	"github.com/7cout/minissp/internal/metrics"
 	"github.com/7cout/minissp/internal/ssp/bidder"
 	"github.com/7cout/minissp/internal/ssp/cache"
 	"github.com/7cout/minissp/internal/ssp/events"
@@ -51,6 +52,7 @@ import (
 
 const (
 	defaultAddr     = ":50051"
+	defaultMetrics  = ":9100"
 	defaultRedis    = "localhost:6379"
 	shutdownTimeout = 10 * time.Second
 	warmUpTimeout   = 3 * time.Second
@@ -75,14 +77,23 @@ func run() error {
 	}
 	defer d.cleanup()
 
-	// 2. Клиенты к DSP.
+	// 2. Metrics-сервер: HTTP на отдельном порту, чтобы не мешать gRPC.
+	metricsAddr := getEnv("METRICS_ADDR", defaultMetrics)
+	metricsErrCh := make(chan error, 1)
+	go func() {
+		if err := metrics.Serve(ctx, metricsAddr); err != nil {
+			metricsErrCh <- err
+		}
+	}()
+
+	// 3. Клиенты к DSP.
 	bidders, err := buildBidders(ctx)
 	if err != nil {
 		return fmt.Errorf("build bidders: %w", err)
 	}
 	slog.Info("dsp clients ready", "count", len(bidders))
 
-	// 3. Сервис SSP.
+	// 4. Сервис SSP.
 	svc := service.New(service.Options{
 		Slots:      d.slots,
 		Publishers: d.publishers,
@@ -97,14 +108,14 @@ func run() error {
 		}
 	}()
 
-	// 4. Worker отката просроченных резервов.
+	// 5. Worker отката просроченных резервов.
 	svc.StartReserveWorker(ctx)
 
-	// 5. Worker публикации событий из outbox в Kafka.
+	// 6. Worker публикации событий из outbox в Kafka.
 	evtWorker := events.NewWorker(d.eventStore, d.publisher, events.DefaultWorkerConfig())
 	go evtWorker.Run(ctx)
 
-	// 6. gRPC-сервер с auth interceptor.
+	// 7. gRPC-сервер с auth interceptor.
 	authResolver := newPublisherResolver(d.publishers)
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(handler.AuthInterceptor(authResolver)),
@@ -112,14 +123,14 @@ func run() error {
 	pb.RegisterSspServiceServer(grpcServer, handler.NewSspServer(svc))
 	reflection.Register(grpcServer)
 
-	// 7. Слушаем.
+	// 8. Слушаем.
 	addr := getEnv("SSP_ADDR", defaultAddr)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", addr, err)
 	}
 
-	// 8. Запуск.
+	// 9. Запуск.
 	errCh := make(chan error, 1)
 	go func() {
 		slog.Info("SSP gRPC server listening", "addr", addr)
@@ -128,15 +139,19 @@ func run() error {
 		}
 	}()
 
-	// 9. Ждём сигнала или ошибки.
+	// 10. Ждём сигнала или ошибки.
 	select {
 	case <-ctx.Done():
 		slog.Info("shutdown signal received")
 	case err := <-errCh:
 		return err
+	case err := <-metricsErrCh:
+		// Метрики — вспомогательная функция. Если упали, сервис
+		// продолжает работать. Логируем и идём дальше.
+		slog.Error("metrics server failed", "error", err)
 	}
 
-	// 10. Graceful shutdown.
+	// 11. Graceful shutdown.
 	done := make(chan struct{})
 	go func() {
 		grpcServer.GracefulStop()

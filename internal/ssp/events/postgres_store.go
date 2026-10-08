@@ -117,3 +117,14 @@ func (s *PostgresStore) MarkFailed(ctx context.Context, id string, lastErr error
 	}
 	return nil
 }
+
+// CountUnpublished возвращает количество неопубликованных записей.
+func (s *PostgresStore) CountUnpublished(ctx context.Context) (int, error) {
+	const q = `SELECT count(*) FROM ssp.event_outbox WHERE published_at IS NULL`
+
+	var n int
+	if err := s.pool.QueryRow(ctx, q).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count unpublished: %w", err)
+	}
+	return n, nil
+}

@@ -25,6 +25,10 @@ type Store interface {
 	// в порядке появления.
 	FetchUnpublished(ctx context.Context, limit int) ([]Record, error)
 
+	// CountUnpublished возвращает общее количество неопубликованных
+	// записей. Используется воркером для обновления метрики.
+	CountUnpublished(ctx context.Context) (int, error)
+
 	// MarkPublished помечает запись как отправленную.
 	MarkPublished(ctx context.Context, id string) error
 
@@ -101,6 +105,20 @@ func (s *MemoryStore) FetchUnpublished(_ context.Context, limit int) ([]Record, 
 		}
 	}
 	return out, nil
+}
+
+// CountUnpublished возвращает количество неопубликованных записей.
+func (s *MemoryStore) CountUnpublished(_ context.Context) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	n := 0
+	for _, r := range s.records {
+		if !r.published {
+			n++
+		}
+	}
+	return n, nil
 }
 
 // MarkPublished помечает запись опубликованной.

@@ -25,11 +25,13 @@ import (
 	dspostgres "github.com/7cout/minissp/internal/dsp/repository/postgres"
 	"github.com/7cout/minissp/internal/dsp/seed"
 	"github.com/7cout/minissp/internal/dsp/service"
+	"github.com/7cout/minissp/internal/metrics"
 	pb "github.com/7cout/minissp/proto/gen/dsp/v1"
 )
 
 const (
 	defaultAddr     = ":50052"
+	defaultMetrics  = ":9101"
 	shutdownTimeout = 10 * time.Second
 )
 
@@ -51,11 +53,20 @@ func run() error {
 	}
 	defer cleanup()
 
-	// 2. Сервис DSP.
+	// 2. Metrics-сервер: HTTP на отдельном порту, чтобы не мешать gRPC.
+	metricsAddr := getEnv("METRICS_ADDR", defaultMetrics)
+	metricsErrCh := make(chan error, 1)
+	go func() {
+		if err := metrics.Serve(ctx, metricsAddr); err != nil {
+			metricsErrCh <- err
+		}
+	}()
+
+	// 3. Сервис DSP.
 	multiplier := getEnvInt("DSP_BID_MULTIPLIER_PERCENT", 150)
 	svc := service.New(campaigns, creatives, txManager, multiplier)
 
-	// 3. API-key аутентификация.
+	// 4. API-key аутентификация.
 	apiKeys := splitEnvList("DSP_API_KEYS")
 	validator := handler.NewStaticAPIKeyValidator(apiKeys)
 	if len(apiKeys) == 0 {
@@ -64,21 +75,21 @@ func run() error {
 		slog.Info("DSP auth enabled", "keys_count", len(apiKeys))
 	}
 
-	// 4. gRPC.
+	// 5. gRPC.
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(handler.AuthInterceptor(validator)),
 	)
 	pb.RegisterDspServiceServer(grpcServer, handler.NewDspServer(svc))
 	reflection.Register(grpcServer)
 
-	// 5. Слушаем.
+	// 6. Слушаем.
 	addr := getEnv("DSP_ADDR", defaultAddr)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", addr, err)
 	}
 
-	// 6. Запуск.
+	// 7. Запуск.
 	errCh := make(chan error, 1)
 	go func() {
 		slog.Info("DSP gRPC server listening",
@@ -90,15 +101,19 @@ func run() error {
 		}
 	}()
 
-	// 7. Ждём сигнала или ошибки.
+	// 8. Ждём сигнала или ошибки.
 	select {
 	case <-ctx.Done():
 		slog.Info("shutdown signal received")
 	case err := <-errCh:
 		return err
+	case err := <-metricsErrCh:
+		// Метрики — вспомогательная функция. Если упали, сервис
+		// продолжает работать. Логируем и идём дальше.
+		slog.Error("metrics server failed", "error", err)
 	}
 
-	// 8. Graceful shutdown.
+	// 9. Graceful shutdown.
 	done := make(chan struct{})
 	go func() {
 		grpcServer.GracefulStop()

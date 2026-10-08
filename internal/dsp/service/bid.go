@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/7cout/minissp/internal/dsp/domain"
+	dspmetrics "github.com/7cout/minissp/internal/dsp/metrics"
 )
 
 // GetBid подбирает кампанию и креатив под запрос, резервирует бюджет
@@ -15,7 +17,13 @@ import (
 //
 // Возвращает domain.ErrNoEligibleCampaign, если ни одна кампания
 // не подходит или у всех недостаточно бюджета.
-func (s *Service) GetBid(ctx context.Context, req domain.BidRequest) (*domain.Bid, error) {
+func (s *Service) GetBid(ctx context.Context, req domain.BidRequest) (bid *domain.Bid, err error) {
+	start := time.Now()
+	defer func() {
+		dspmetrics.BidDuration.Observe(time.Since(start).Seconds())
+		dspmetrics.BidsTotal.WithLabelValues(bidStatus(err)).Inc()
+	}()
+
 	// 1. Кампании по гео с доступным бюджетом.
 	campaigns, err := s.campaigns.ListByGeo(ctx, req.Geo)
 	if err != nil {
@@ -112,5 +120,17 @@ func fitsSlot(c domain.Creative, req domain.BidRequest) bool {
 	// native и audio — заглушки, всегда false
 	default:
 		return false
+	}
+}
+
+// bidStatus превращает ошибку GetBid в метку для счётчика.
+func bidStatus(err error) string {
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.Is(err, domain.ErrNoEligibleCampaign):
+		return "no_eligible"
+	default:
+		return "error"
 	}
 }

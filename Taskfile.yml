@@ -152,6 +152,7 @@ tasks:
       SSP_ADDR: '{{.SSP_ADDR | default ":50051"}}'
       DSP_API_KEY: '{{.DSP_API_KEY}}'
       DSP_NIKE_ADDR: '{{.DSP_NIKE_ADDR}}'
+      METRICS_ADDR: '{{.METRICS_ADDR | default ":9100"}}'
     cmds:
       - go run ./cmd/ssp
 
@@ -168,6 +169,7 @@ tasks:
       POSTGRES_USER: '{{.POSTGRES_USER}}'
       POSTGRES_PASSWORD: '{{.POSTGRES_PASSWORD}}'
       POSTGRES_DB: '{{.POSTGRES_DB}}'
+      METRICS_ADDR: '{{.METRICS_ADDR | default ":9100"}}'
     cmds:
       - go run ./cmd/ssp
 
@@ -180,6 +182,7 @@ tasks:
       DSP_ADDR: '{{.DSP_ADDR | default ":50052"}}'
       DSP_BID_MULTIPLIER_PERCENT: '{{.DSP_BID_MULTIPLIER_PERCENT | default "150"}}'
       DSP_API_KEYS: '{{.DSP_API_KEYS}}'
+      METRICS_ADDR: '{{.METRICS_ADDR | default ":9101"}}'
     cmds:
       - go run ./cmd/dsp
 
@@ -196,10 +199,11 @@ tasks:
       POSTGRES_USER: '{{.POSTGRES_USER}}'
       POSTGRES_PASSWORD: '{{.POSTGRES_PASSWORD}}'
       POSTGRES_DB: '{{.POSTGRES_DB}}'
+      METRICS_ADDR: '{{.METRICS_ADDR | default ":9101"}}'
     cmds:
       - go run ./cmd/dsp
 
-  # --- Publisher (позже) ---
+  # --- Publisher ---
 
   run:publisher:
     desc: "Запустить Publisher-эмулятор"

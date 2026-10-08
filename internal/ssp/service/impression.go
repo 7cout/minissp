@@ -9,6 +9,7 @@ import (
 
 	"github.com/7cout/minissp/internal/ssp/domain"
 	"github.com/7cout/minissp/internal/ssp/events"
+	sspmetrics "github.com/7cout/minissp/internal/ssp/metrics"
 	"github.com/7cout/minissp/internal/ssp/reserve"
 )
 
@@ -24,15 +25,11 @@ import (
 //     advertiser'а.
 //  4. В одной транзакции: начисляем publisher'у долю и кладём
 //     событие Impression в outbox.
-//
-// При ошибке на шагах 2–3 запись возвращается в резерв через Restore —
-// Impression можно повторить. При ошибке на шаге 4 запись в резерве
-// уже помечена как processed (Consume), но не начислена — это
-// документированный trade-off: Commit в DSP прошёл, деньги списаны,
-// но publisher ещё не получил своё. Ретрай Impression не поможет
-// (ConsumeAlready). Такие случаи логируются с уровнем ERROR
-// и требуют ручного вмешательства.
-func (s *Service) Impression(ctx context.Context, auctionID string) error {
+func (s *Service) Impression(ctx context.Context, auctionID string) (err error) {
+	defer func() {
+		sspmetrics.ImpressionsTotal.WithLabelValues(impressionStatus(err)).Inc()
+	}()
+
 	record, status, err := s.reserve.Consume(ctx, auctionID)
 	if err != nil {
 		if errors.Is(err, reserve.ErrNotFound) {
@@ -90,6 +87,18 @@ func (s *Service) Impression(ctx context.Context, auctionID string) error {
 	}
 
 	return nil
+}
+
+// impressionStatus превращает ошибку Impression в метку для счётчика.
+func impressionStatus(err error) string {
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.Is(err, domain.ErrAuctionNotFound):
+		return "not_found"
+	default:
+		return "error"
+	}
 }
 
 // commitToBidder отправляет Commit конкретному биддеру.
