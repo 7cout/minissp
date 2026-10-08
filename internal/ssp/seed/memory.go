@@ -26,7 +26,7 @@ func PopulateMemory(
 		return fmt.Errorf("seed publisher: %w", err)
 	}
 
-	slots.Add(&domain.Slot{
+	if err := slots.Add(ctx, &domain.Slot{
 		ID:          SlotHomeBanner,
 		PublisherID: PublisherT2,
 		Name:        "home_banner",
@@ -34,7 +34,9 @@ func PopulateMemory(
 		MinPrice:    1_000_000,
 		Type:        domain.CreativeTypeBanner,
 		Banner:      &domain.Banner{Width: 320, Height: 50},
-	})
+	}); err != nil {
+		return fmt.Errorf("seed slot: %w", err)
+	}
 
 	return nil
 }

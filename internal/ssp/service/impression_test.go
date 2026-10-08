@@ -12,7 +12,7 @@ import (
 func TestService_Impression_HappyPath(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, pubs := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 	addPublisher(t, pubs, testPublisher("pub_1"))
 
 	// Проводим аукцион.
@@ -50,7 +50,7 @@ func TestService_Impression_HappyPath(t *testing.T) {
 func TestService_Impression_Idempotent(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, pubs := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 	addPublisher(t, pubs, testPublisher("pub_1"))
 
 	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
@@ -75,7 +75,7 @@ func TestService_Impression_Idempotent(t *testing.T) {
 func TestService_Impression_Concurrent(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, pubs := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 	addPublisher(t, pubs, testPublisher("pub_1"))
 
 	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
@@ -138,7 +138,7 @@ func TestService_Impression_CommitFails(t *testing.T) {
 	bidder.commitErr = errors.New("dsp down")
 
 	svc, slots, pubs := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 	addPublisher(t, pubs, testPublisher("pub_1"))
 
 	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
@@ -160,7 +160,7 @@ func TestService_Impression_CommitFails(t *testing.T) {
 func TestService_Impression_PublisherNotFound_NoCommit(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, pubs := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 	addPublisher(t, pubs, testPublisher("pub_1"))
 
 	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
@@ -196,7 +196,7 @@ func TestService_Impression_PublisherNotFound_NoCommit(t *testing.T) {
 func TestService_Impression_AddBalanceFails_ProcessedStays(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, pubs := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 	addPublisher(t, pubs, testPublisher("pub_1"))
 
 	// AddBalance начнёт падать после предварительной проверки Get.

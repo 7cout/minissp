@@ -10,7 +10,7 @@ import (
 
 func TestService_GetSlotByName(t *testing.T) {
 	svc, slots, _ := newTestService()
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 	got, err := svc.GetSlotByName(context.Background(), "pub_1", "home_banner")
 	if err != nil {

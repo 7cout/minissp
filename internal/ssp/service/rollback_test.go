@@ -13,7 +13,7 @@ import (
 func TestService_processExpired_HappyPath(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, _ := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -51,7 +51,7 @@ func TestService_processExpired_HappyPath(t *testing.T) {
 func TestService_processExpired_NoExpired(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, _ := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 	_, _ = svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -75,7 +75,7 @@ func TestService_processExpired_RollbackFails_RecordRestored(t *testing.T) {
 	bidder.rollbackErr = errors.New("dsp down")
 
 	svc, slots, _ := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -141,7 +141,7 @@ func TestService_Close(t *testing.T) {
 func TestService_processExpired_SkipsAlreadyTaken(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, _ := newTestService(bidder)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 	result, _ := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -176,7 +176,7 @@ func TestService_ImpressionVsProcessExpired_Race(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		bidder := testBidder("nike", "camp_nike", 5_000_000)
 		svc, slots, pubs := newTestService(bidder)
-		slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+		addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 		addPublisher(t, pubs, testPublisher("pub_1"))
 
 		result, _ := svc.RunAuction(context.Background(), domain.BidRequest{

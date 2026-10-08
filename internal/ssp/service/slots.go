@@ -31,6 +31,9 @@ func (s *Service) RegisterSlot(ctx context.Context, publisherID string, req doma
 		return nil, fmt.Errorf("invalid slot: %w", err)
 	}
 
-	slot, _ := s.slots.AddIfAbsent(&req)
+	slot, _, err := s.slots.AddIfAbsent(ctx, &req)
+	if err != nil {
+		return nil, fmt.Errorf("add slot: %w", err)
+	}
 	return slot, nil
 }

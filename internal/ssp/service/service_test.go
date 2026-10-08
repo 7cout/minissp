@@ -24,26 +24,27 @@ func newFakeSlotRepo() *fakeSlotRepo {
 	return &fakeSlotRepo{slots: make(map[string]*domain.Slot)}
 }
 
-func (f *fakeSlotRepo) Add(slot *domain.Slot) {
+func (f *fakeSlotRepo) Add(_ context.Context, slot *domain.Slot) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.slots[slot.ID] = slot
+	return nil
 }
 
-func (f *fakeSlotRepo) AddIfAbsent(slot *domain.Slot) (*domain.Slot, bool) {
+func (f *fakeSlotRepo) AddIfAbsent(_ context.Context, slot *domain.Slot) (*domain.Slot, bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
 	for _, s := range f.slots {
 		if s.PublisherID == slot.PublisherID && s.Name == slot.Name {
 			cp := *s
-			return &cp, false
+			return &cp, false, nil
 		}
 	}
 
 	f.slots[slot.ID] = slot
 	cp := *slot
-	return &cp, true
+	return &cp, true, nil
 }
 
 func (f *fakeSlotRepo) Get(_ context.Context, id string) (*domain.Slot, error) {
@@ -168,10 +169,8 @@ type fakeBidder struct {
 	commitErr   error
 	rollbackErr error
 
-	// для теста таймаута
 	bidDelay time.Duration
 
-	// captured
 	mu                  sync.Mutex
 	capturedGetBidReq   domain.BidRequest
 	capturedGetBidSlot  *domain.Slot
@@ -254,6 +253,14 @@ func addPublisher(t *testing.T, repo *fakePublisherRepo, p *domain.Publisher) {
 	t.Helper()
 	if err := repo.Add(context.Background(), p); err != nil {
 		t.Fatalf("add publisher: %v", err)
+	}
+}
+
+// addSlot добавляет слот и падает с t.Fatal при ошибке.
+func addSlot(t *testing.T, repo *fakeSlotRepo, slot *domain.Slot) {
+	t.Helper()
+	if err := repo.Add(context.Background(), slot); err != nil {
+		t.Fatalf("add slot: %v", err)
 	}
 }
 

@@ -13,8 +13,8 @@ import (
 type SlotRepository interface {
 	Get(ctx context.Context, id string) (*domain.Slot, error)
 	GetByName(ctx context.Context, publisherID, name string) (*domain.Slot, error)
-	Add(slot *domain.Slot)
-	AddIfAbsent(slot *domain.Slot) (existing *domain.Slot, inserted bool)
+	Add(ctx context.Context, slot *domain.Slot) error
+	AddIfAbsent(ctx context.Context, slot *domain.Slot) (*domain.Slot, bool, error)
 }
 
 // PublisherRepository — доступ к издателям.

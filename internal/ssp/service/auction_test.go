@@ -17,7 +17,7 @@ func TestService_RunAuction_HappyPath_SecondPrice(t *testing.T) {
 		testBidder("puma", "camp_puma", 5_000_000),
 	)
 	slot := testBannerSlot("slot_1", "pub_1", "home_banner")
-	slots.Add(slot)
+	addSlot(t, slots, slot)
 
 	result, err := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -59,7 +59,7 @@ func TestService_RunAuction_SingleBid_UsesFloor(t *testing.T) {
 		testBidder("nike", "camp_nike", 500_000), // ставка ниже floor
 	)
 	slot := testBannerSlot("slot_1", "pub_1", "home_banner")
-	slots.Add(slot)
+	addSlot(t, slots, slot)
 
 	result, err := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -82,7 +82,7 @@ func TestService_RunAuction_TwoBids_SecondBelowFloor(t *testing.T) {
 		testBidder("adidas", "camp_adidas", 500_000),
 	)
 	slot := testBannerSlot("slot_1", "pub_1", "home_banner")
-	slots.Add(slot)
+	addSlot(t, slots, slot)
 
 	result, err := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -104,7 +104,7 @@ func TestService_RunAuction_EqualBids_FirstWins(t *testing.T) {
 		testBidder("adidas", "camp_adidas", 5_000_000),
 	)
 	slot := testBannerSlot("slot_1", "pub_1", "home_banner")
-	slots.Add(slot)
+	addSlot(t, slots, slot)
 
 	result, err := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -125,7 +125,7 @@ func TestService_RunAuction_NoBids(t *testing.T) {
 		&fakeBidder{name: "nike", bidErr: domain.ErrNoBids},
 		&fakeBidder{name: "adidas", bidErr: domain.ErrNoBids},
 	)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 	_, err := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -141,7 +141,7 @@ func TestService_RunAuction_AllBiddersFail(t *testing.T) {
 		&fakeBidder{name: "nike", bidErr: errors.New("connection refused")},
 		&fakeBidder{name: "adidas", bidErr: errors.New("timeout")},
 	)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 	_, err := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -157,7 +157,7 @@ func TestService_RunAuction_OneFailsOthersSucceed(t *testing.T) {
 		&fakeBidder{name: "nike", bidErr: errors.New("boom")},
 		testBidder("adidas", "camp_adidas", 5_000_000),
 	)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 	result, err := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",
@@ -203,7 +203,7 @@ func TestService_RunAuction_ContextCancelled(t *testing.T) {
 			bidDelay: 100 * time.Millisecond,
 		},
 	)
-	slots.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -221,7 +221,7 @@ func TestService_RunAuction_BidderReceivesSlotParams(t *testing.T) {
 	bidder := testBidder("nike", "camp_nike", 5_000_000)
 	svc, slots, _ := newTestService(bidder)
 	slot := testBannerSlot("slot_1", "pub_1", "home_banner")
-	slots.Add(slot)
+	addSlot(t, slots, slot)
 
 	_, err := svc.RunAuction(context.Background(), domain.BidRequest{
 		RequestID: "req_1",

@@ -40,10 +40,18 @@ func testVideoSlot(id, publisherID, name string) *domain.Slot {
 	}
 }
 
+// addSlot — helper для тестов: падает при ошибке Add.
+func addSlot(t *testing.T, repo *SlotRepo, slot *domain.Slot) {
+	t.Helper()
+	if err := repo.Add(context.Background(), slot); err != nil {
+		t.Fatalf("add slot: %v", err)
+	}
+}
+
 func TestSlotRepo_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		repo := NewSlotRepo()
-		repo.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+		addSlot(t, repo, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 		got, err := repo.Get(context.Background(), "slot_1")
 		if err != nil {
@@ -71,7 +79,7 @@ func TestSlotRepo_Get(t *testing.T) {
 
 	t.Run("returns deep copy — banner", func(t *testing.T) {
 		repo := NewSlotRepo()
-		repo.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+		addSlot(t, repo, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 		got, _ := repo.Get(context.Background(), "slot_1")
 		got.Banner.Width = 999
@@ -84,7 +92,7 @@ func TestSlotRepo_Get(t *testing.T) {
 
 	t.Run("returns deep copy — video mimes", func(t *testing.T) {
 		repo := NewSlotRepo()
-		repo.Add(testVideoSlot("slot_1", "pub_1", "preroll"))
+		addSlot(t, repo, testVideoSlot("slot_1", "pub_1", "preroll"))
 
 		got, _ := repo.Get(context.Background(), "slot_1")
 		got.Video.MIMEs[0] = "changed"
@@ -99,8 +107,8 @@ func TestSlotRepo_Get(t *testing.T) {
 func TestSlotRepo_GetByName(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		repo := NewSlotRepo()
-		repo.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
-		repo.Add(testBannerSlot("slot_2", "pub_2", "home_banner"))
+		addSlot(t, repo, testBannerSlot("slot_1", "pub_1", "home_banner"))
+		addSlot(t, repo, testBannerSlot("slot_2", "pub_2", "home_banner"))
 
 		got, err := repo.GetByName(context.Background(), "pub_1", "home_banner")
 		if err != nil {
@@ -113,7 +121,7 @@ func TestSlotRepo_GetByName(t *testing.T) {
 
 	t.Run("not found — wrong publisher", func(t *testing.T) {
 		repo := NewSlotRepo()
-		repo.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+		addSlot(t, repo, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 		_, err := repo.GetByName(context.Background(), "pub_2", "home_banner")
 		if !errors.Is(err, domain.ErrSlotNotFound) {
@@ -123,11 +131,39 @@ func TestSlotRepo_GetByName(t *testing.T) {
 
 	t.Run("not found — wrong name", func(t *testing.T) {
 		repo := NewSlotRepo()
-		repo.Add(testBannerSlot("slot_1", "pub_1", "home_banner"))
+		addSlot(t, repo, testBannerSlot("slot_1", "pub_1", "home_banner"))
 
 		_, err := repo.GetByName(context.Background(), "pub_1", "other")
 		if !errors.Is(err, domain.ErrSlotNotFound) {
 			t.Errorf("want ErrSlotNotFound, got %v", err)
+		}
+	})
+}
+
+func TestSlotRepo_Add(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		repo := NewSlotRepo()
+		err := repo.Add(context.Background(), testBannerSlot("slot_1", "pub_1", "home_banner"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		repo := NewSlotRepo()
+		err := repo.Add(context.Background(), testBannerSlot("", "pub_1", "home_banner"))
+		if err == nil {
+			t.Error("want error for empty id, got nil")
+		}
+	})
+
+	t.Run("duplicate id", func(t *testing.T) {
+		repo := NewSlotRepo()
+		addSlot(t, repo, testBannerSlot("slot_1", "pub_1", "home_banner"))
+
+		err := repo.Add(context.Background(), testBannerSlot("slot_1", "pub_2", "other"))
+		if err == nil {
+			t.Error("want error for duplicate id, got nil")
 		}
 	})
 }
@@ -137,7 +173,10 @@ func TestSlotRepo_AddIfAbsent(t *testing.T) {
 		repo := NewSlotRepo()
 		slot := testBannerSlot("slot_1", "pub_1", "home_banner")
 
-		got, inserted := repo.AddIfAbsent(slot)
+		got, inserted, err := repo.AddIfAbsent(context.Background(), slot)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if !inserted {
 			t.Error("want inserted=true")
 		}
@@ -148,14 +187,16 @@ func TestSlotRepo_AddIfAbsent(t *testing.T) {
 
 	t.Run("second insert with same name returns existing", func(t *testing.T) {
 		repo := NewSlotRepo()
-		repo.AddIfAbsent(testBannerSlot("slot_1", "pub_1", "home_banner"))
+		_, _, _ = repo.AddIfAbsent(context.Background(), testBannerSlot("slot_1", "pub_1", "home_banner"))
 
-		_, inserted := repo.AddIfAbsent(testBannerSlot("slot_2", "pub_1", "home_banner"))
+		_, inserted, err := repo.AddIfAbsent(context.Background(), testBannerSlot("slot_2", "pub_1", "home_banner"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if inserted {
 			t.Error("want inserted=false")
 		}
 
-		// Убедимся, что в репозитории только один слот.
 		count := 0
 		repo.mu.RLock()
 		for range repo.slots {
@@ -169,9 +210,12 @@ func TestSlotRepo_AddIfAbsent(t *testing.T) {
 
 	t.Run("different publisher — same name is fine", func(t *testing.T) {
 		repo := NewSlotRepo()
-		repo.AddIfAbsent(testBannerSlot("slot_1", "pub_1", "home_banner"))
+		_, _, _ = repo.AddIfAbsent(context.Background(), testBannerSlot("slot_1", "pub_1", "home_banner"))
 
-		_, inserted := repo.AddIfAbsent(testBannerSlot("slot_2", "pub_2", "home_banner"))
+		_, inserted, err := repo.AddIfAbsent(context.Background(), testBannerSlot("slot_2", "pub_2", "home_banner"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if !inserted {
 			t.Error("want inserted=true for different publisher")
 		}
@@ -191,14 +235,13 @@ func TestSlotRepo_AddIfAbsent(t *testing.T) {
 				defer wg.Done()
 				<-start
 				slot := testBannerSlot(uuid.NewString(), "pub_1", "home_banner")
-				got, _ := repo.AddIfAbsent(slot)
+				got, _, _ := repo.AddIfAbsent(context.Background(), slot)
 				ids[idx] = got.ID
 			}(i)
 		}
 		close(start)
 		wg.Wait()
 
-		// Все должны получить один и тот же ID.
 		want := ids[0]
 		for i, id := range ids {
 			if id != want {
@@ -206,7 +249,6 @@ func TestSlotRepo_AddIfAbsent(t *testing.T) {
 			}
 		}
 
-		// В репозитории ровно один слот.
 		repo.mu.RLock()
 		count := len(repo.slots)
 		repo.mu.RUnlock()
