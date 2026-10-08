@@ -131,7 +131,9 @@ flowchart LR
 **SSP:**
 
     publishers       id, name, api_key, balance
-    ad_slots         id, publisher_id, name, geo, min_price, type, params
+    ad_slots         id, publisher_id, name, geo, min_price, type,
+                     banner_width, banner_height,
+                     video_width, video_height, video_duration, video_mimes
     auctions         auction_id, imp_id, campaign_id, creative_id, publisher_id,
                      slot_id, bidder_id, price, status, created_at
 
@@ -141,9 +143,6 @@ flowchart LR
     campaigns        id, advertiser_id, name,
                      budget_total, budget_remaining, budget_reserved, geo_target
     creatives        id, campaign_id, type, url, click_url, params
-
-`params` — JSONB: для баннера `{"width": 320, "height": 50}`,
-для видео `{"width": 640, "height": 480, "duration": 15, "mimes": ["video/mp4"]}`.
 
 **ClickHouse (планируется):**
 

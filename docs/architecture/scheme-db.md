@@ -8,7 +8,9 @@
 **SSP:**
 
     publishers       id, name, api_key, balance
-    ad_slots         id, publisher_id, name, geo, min_price, type, params
+    ad_slots         id, publisher_id, name, geo, min_price, type,
+                     banner_width, banner_height,
+                     video_width, video_height, video_duration, video_mimes
     auctions         id, imp_id, campaign_id, creative_id, publisher_id,
                      slot_id, bidder_id, price, status, created_at
     event_log        id, type, auction_id, campaign_id, publisher_id,
@@ -27,17 +29,18 @@
 - **ID** — `UUID`.
 - **Geo** — `VARCHAR(2)`, ISO 3166-1 alpha-2.
 - **Type** — `TEXT`: `banner`, `video`, `native`, `audio`.
-- **Params** — `JSONB` для параметров креатива/слота.
+- **Параметры креатива** — явные колонки под каждый тип
+  (`banner_width`, `banner_height`, `video_*`), не JSONB.
+  Причины: горячий путь (GetSlotByName на каждый RunAuction),
+  ограниченное число типов (4), CHECK-и в БД на корректность.
 - **Время** — `TIMESTAMPTZ`.
 
-Примеры `params`:
+### Почему не JSONB для параметров
 
-```json
-{"width": 320, "height": 50}                                       // banner
-{"width": 640, "height": 480, "duration": 15, "mimes": ["video/mp4"]}  // video
-```
-
-Валидация `params` — в Go перед сохранением (`domain.Validate`).
+В AdTech на горячем пути важна скорость и предсказуемость.
+Явные колонки быстрее парсятся, индексируются стандартно и
+типизированы CHECK-ами. JSONB оставляем для `event_log` — там
+схема нестабильна и объём большой.
 
 ## Индексы
 
