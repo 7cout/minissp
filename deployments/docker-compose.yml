@@ -23,6 +23,7 @@ services:
     image: redis:7-alpine
     container_name: minissp-redis
     restart: unless-stopped
+    command: ["redis-server", "--notify-keyspace-events", "Ex"]
     ports:
       - "6379:6379"
     volumes:
