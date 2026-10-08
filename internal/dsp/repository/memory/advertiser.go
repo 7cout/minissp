@@ -2,6 +2,8 @@ package memory
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/7cout/minissp/internal/dsp/domain"
@@ -21,10 +23,22 @@ func NewAdvertiserRepo() *AdvertiserRepo {
 }
 
 // Add добавляет рекламодателя.
-func (r *AdvertiserRepo) Add(a *domain.Advertiser) {
+//
+// Возвращает ошибку при пустом ID или дубликате.
+func (r *AdvertiserRepo) Add(_ context.Context, a *domain.Advertiser) error {
+	if strings.TrimSpace(a.ID) == "" {
+		return fmt.Errorf("advertiser id is required")
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if _, exists := r.advertisers[a.ID]; exists {
+		return fmt.Errorf("advertiser with id %s already exists", a.ID)
+	}
+
 	r.advertisers[a.ID] = a
+	return nil
 }
 
 // Get возвращает рекламодателя по ID.

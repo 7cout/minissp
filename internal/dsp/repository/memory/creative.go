@@ -2,6 +2,8 @@ package memory
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/7cout/minissp/internal/dsp/domain"
@@ -21,10 +23,22 @@ func NewCreativeRepo() *CreativeRepo {
 }
 
 // Add добавляет креатив.
-func (r *CreativeRepo) Add(c *domain.Creative) {
+//
+// Возвращает ошибку при пустом ID или дубликате.
+func (r *CreativeRepo) Add(_ context.Context, c *domain.Creative) error {
+	if strings.TrimSpace(c.ID) == "" {
+		return fmt.Errorf("creative id is required")
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if _, exists := r.creatives[c.ID]; exists {
+		return fmt.Errorf("creative with id %s already exists", c.ID)
+	}
+
 	r.creatives[c.ID] = c
+	return nil
 }
 
 // Get возвращает креатив по ID.

@@ -46,7 +46,9 @@ func run() error {
 	campaigns := memory.NewCampaignRepo()
 	creatives := memory.NewCreativeRepo()
 
-	seed.PopulateMemory(advertisers, campaigns, creatives)
+	if err := seed.Populate(ctx, advertisers, campaigns, creatives); err != nil {
+		return fmt.Errorf("seed memory: %w", err)
+	}
 	slog.Info("seed data loaded",
 		"advertisers", len(seed.AdvertiserIDs()),
 		"campaigns", len(seed.CampaignIDs()),

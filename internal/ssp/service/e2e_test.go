@@ -45,7 +45,9 @@ func newE2EFixture(t *testing.T) *e2eFixture {
 	dspAdvertisers := dspmemory.NewAdvertiserRepo()
 	dspCampaigns := dspmemory.NewCampaignRepo()
 	dspCreatives := dspmemory.NewCreativeRepo()
-	dspseed.PopulateMemory(dspAdvertisers, dspCampaigns, dspCreatives)
+	if err := dspseed.Populate(ctx, dspAdvertisers, dspCampaigns, dspCreatives); err != nil {
+		t.Fatalf("seed dsp: %v", err)
+	}
 
 	dspSvc := dspservice.New(dspCampaigns, dspCreatives, dspAdvertisers, 150)
 	validator := dspHandler.NewStaticAPIKeyValidator([]string{e2eTestAPIKey})

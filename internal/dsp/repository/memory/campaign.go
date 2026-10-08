@@ -2,6 +2,8 @@ package memory
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/7cout/minissp/internal/dsp/domain"
@@ -21,10 +23,22 @@ func NewCampaignRepo() *CampaignRepo {
 }
 
 // Add добавляет кампанию.
-func (r *CampaignRepo) Add(c *domain.Campaign) {
+//
+// Возвращает ошибку при пустом ID или дубликате.
+func (r *CampaignRepo) Add(_ context.Context, c *domain.Campaign) error {
+	if strings.TrimSpace(c.ID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	if _, exists := r.campaigns[c.ID]; exists {
+		return fmt.Errorf("campaign with id %s already exists", c.ID)
+	}
+
 	r.campaigns[c.ID] = c
+	return nil
 }
 
 // Get возвращает кампанию по ID.
@@ -107,8 +121,7 @@ func (r *CampaignRepo) Commit(_ context.Context, campaignID string, amount int64
 	return nil
 }
 
-// Uncommit отменяет Commit — возвращает деньги из budget_reserved
-// обратно в budget_reserved... нет, увеличивает reserved.
+// Uncommit отменяет Commit — возвращает деньги в budget_reserved.
 //
 // Используется сервисом для компенсации, если после успешного
 // Commit не удалось списать деньги с advertiser'а.

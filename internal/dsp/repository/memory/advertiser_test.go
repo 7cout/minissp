@@ -18,10 +18,18 @@ func testAdvertiser(id string, balance int64) *domain.Advertiser {
 	}
 }
 
+// addAdvertiser — helper: падает с t.Fatal при ошибке Add.
+func addAdvertiser(t *testing.T, repo *AdvertiserRepo, a *domain.Advertiser) {
+	t.Helper()
+	if err := repo.Add(context.Background(), a); err != nil {
+		t.Fatalf("add advertiser: %v", err)
+	}
+}
+
 func TestAdvertiserRepo_Get(t *testing.T) {
 	t.Run("found", func(t *testing.T) {
 		repo := NewAdvertiserRepo()
-		repo.Add(testAdvertiser("adv_1", 1_000_000))
+		addAdvertiser(t, repo, testAdvertiser("adv_1", 1_000_000))
 
 		got, err := repo.Get(context.Background(), "adv_1")
 		if err != nil {
@@ -43,7 +51,7 @@ func TestAdvertiserRepo_Get(t *testing.T) {
 
 	t.Run("returns copy", func(t *testing.T) {
 		repo := NewAdvertiserRepo()
-		repo.Add(testAdvertiser("adv_1", 1_000_000))
+		addAdvertiser(t, repo, testAdvertiser("adv_1", 1_000_000))
 
 		got, _ := repo.Get(context.Background(), "adv_1")
 		got.Balance = 0
@@ -55,10 +63,38 @@ func TestAdvertiserRepo_Get(t *testing.T) {
 	})
 }
 
+func TestAdvertiserRepo_Add(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		repo := NewAdvertiserRepo()
+		err := repo.Add(context.Background(), testAdvertiser("adv_1", 1_000_000))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("empty id", func(t *testing.T) {
+		repo := NewAdvertiserRepo()
+		err := repo.Add(context.Background(), testAdvertiser("", 1_000_000))
+		if err == nil {
+			t.Error("want error for empty id, got nil")
+		}
+	})
+
+	t.Run("duplicate id", func(t *testing.T) {
+		repo := NewAdvertiserRepo()
+		addAdvertiser(t, repo, testAdvertiser("adv_1", 1_000_000))
+
+		err := repo.Add(context.Background(), testAdvertiser("adv_1", 500_000))
+		if err == nil {
+			t.Error("want error for duplicate id, got nil")
+		}
+	})
+}
+
 func TestAdvertiserRepo_Spend(t *testing.T) {
 	t.Run("success — balance decreased", func(t *testing.T) {
 		repo := NewAdvertiserRepo()
-		repo.Add(testAdvertiser("adv_1", 1_000_000))
+		addAdvertiser(t, repo, testAdvertiser("adv_1", 1_000_000))
 
 		err := repo.Spend(context.Background(), "adv_1", 300_000)
 		if err != nil {
@@ -82,7 +118,7 @@ func TestAdvertiserRepo_Spend(t *testing.T) {
 
 	t.Run("insufficient balance", func(t *testing.T) {
 		repo := NewAdvertiserRepo()
-		repo.Add(testAdvertiser("adv_1", 1_000))
+		addAdvertiser(t, repo, testAdvertiser("adv_1", 1_000))
 
 		err := repo.Spend(context.Background(), "adv_1", 2_000)
 		if !errors.Is(err, domain.ErrInsufficientBalance) {
@@ -94,7 +130,7 @@ func TestAdvertiserRepo_Spend(t *testing.T) {
 func TestAdvertiserRepo_Spend_Concurrent(t *testing.T) {
 	t.Run("exactly as many succeed as balance allows", func(t *testing.T) {
 		repo := NewAdvertiserRepo()
-		repo.Add(testAdvertiser("adv_1", 1_000))
+		addAdvertiser(t, repo, testAdvertiser("adv_1", 1_000))
 
 		const goroutines = 200
 		const amount = 10 // хватит ровно на 100
