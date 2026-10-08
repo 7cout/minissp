@@ -291,3 +291,35 @@ func TestMemoryManager_Concurrent_Consume(t *testing.T) {
 		t.Errorf("fresh = %d, want exactly 1", freshCount)
 	}
 }
+
+func TestMemoryManager_Restore_RefreshesTTL(t *testing.T) {
+	// Регрессионный тест на баг: Restore должен обновлять CreatedAt.
+	// Без этого запись после Restore остаётся «просроченной» по старому
+	// времени, и следующий Tick сразу уводит её в Rollback — Impression
+	// не успевает повториться.
+	m := NewMemory(MemoryOptions{
+		TTL:          50 * time.Millisecond,
+		ProcessedTTL: time.Minute,
+		ScanInterval: time.Millisecond,
+	})
+	ctx := context.Background()
+
+	_ = m.Reserve(ctx, testRecord("a_1"))
+	m.ExpireNow("a_1") // теперь запись просрочена
+
+	// Impression не удался → Restore.
+	rec, _, _ := m.Consume(ctx, "a_1")
+	if err := m.Restore(ctx, rec); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+
+	// Сразу после Restore Tick не должен видеть запись просроченной.
+	var called int
+	m.Tick(ctx, func(_ domain.AuctionRecord) error {
+		called++
+		return nil
+	})
+	if called != 0 {
+		t.Errorf("record should not be expired right after Restore, got %d rollback calls", called)
+	}
+}

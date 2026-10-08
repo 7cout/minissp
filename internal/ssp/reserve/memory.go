@@ -96,12 +96,19 @@ func (m *MemoryManager) Consume(_ context.Context, auctionID string) (domain.Auc
 
 // Restore возвращает запись в резерв.
 //
-// Снимает отметку processed и кладёт запись обратно в auctions.
+// Снимает отметку processed, обновляет CreatedAt на текущее время
+// и кладёт запись обратно в auctions.
+//
+// Обновление CreatedAt важно: без него запись останется «просроченной»
+// по старому времени и следующий же Tick уведёт её в Rollback — до того,
+// как Impression успеет повториться. С обновлением у Impression'а
+// снова есть полные TTL секунд на ретрай.
 func (m *MemoryManager) Restore(_ context.Context, record domain.AuctionRecord) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	delete(m.processed, record.AuctionID)
+	record.CreatedAt = time.Now()
 	m.auctions[record.AuctionID] = record
 	return nil
 }
