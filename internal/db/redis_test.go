@@ -44,18 +44,26 @@ func TestRedisClient_ExpiredEvent(t *testing.T) {
 	}
 
 	// Кладём ключ с коротким TTL.
+	//
+	// В той же DB работают тесты slot cache (internal/ssp/cache/redis_test.go),
+	// которые тоже пишут ключи с TTL и получают события в этот же канал.
+	// Поэтому не берём первое событие, а ждём именно свой ключ.
 	key := "test:expired"
 	if err := client.Set(ctx, key, "value", 100*time.Millisecond).Err(); err != nil {
 		t.Fatalf("set: %v", err)
 	}
 
-	// Ждём события.
-	select {
-	case msg := <-pubsub.Channel():
-		if msg.Payload != key {
-			t.Errorf("expired key = %q, want %q", msg.Payload, key)
+	deadline := time.After(3 * time.Second)
+	for {
+		select {
+		case msg := <-pubsub.Channel():
+			if msg.Payload == key {
+				return // нашли своё событие
+			}
+			// Чужое событие (например, из тестов slot cache) — игнорируем.
+			t.Logf("skipping unrelated expired key: %q", msg.Payload)
+		case <-deadline:
+			t.Fatal("did not receive expired event for our key — check notify-keyspace-events=Ex")
 		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("did not receive expired event — check notify-keyspace-events=Ex")
 	}
 }
