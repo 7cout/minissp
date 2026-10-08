@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/7cout/minissp/internal/ssp/domain"
+	"github.com/7cout/minissp/internal/ssp/events"
 	"github.com/7cout/minissp/internal/ssp/reserve"
 )
 
@@ -14,6 +16,22 @@ import (
 //
 // Идемпотентно: параллельные или повторные вызовы с тем же auction_id
 // возвращают nil, повторного списания не будет.
+//
+// Алгоритм:
+//  1. Атомарно забираем запись из резерва (Consume).
+//  2. Проверяем, что publisher существует.
+//  3. Отправляем Commit в DSP — там списывается бюджет и деньги
+//     advertiser'а.
+//  4. В одной транзакции: начисляем publisher'у долю и кладём
+//     событие Impression в outbox.
+//
+// При ошибке на шагах 2–3 запись возвращается в резерв через Restore —
+// Impression можно повторить. При ошибке на шаге 4 запись в резерве
+// уже помечена как processed (Consume), но не начислена — это
+// документированный trade-off: Commit в DSP прошёл, деньги списаны,
+// но publisher ещё не получил своё. Ретрай Impression не поможет
+// (ConsumeAlready). Такие случаи логируются с уровнем ERROR
+// и требуют ручного вмешательства.
 func (s *Service) Impression(ctx context.Context, auctionID string) error {
 	record, status, err := s.reserve.Consume(ctx, auctionID)
 	if err != nil {
@@ -27,8 +45,8 @@ func (s *Service) Impression(ctx context.Context, auctionID string) error {
 	}
 
 	// Предварительная проверка: publisher существует. Отсекает ошибку
-	// AddBalance до того, как мы дёрнули DSP. Если упало — возвращаем
-	// запись в резерв, чтобы можно было повторить.
+	// до того, как мы дёрнули DSP. Если упало — возвращаем запись
+	// в резерв, чтобы можно было повторить.
 	if _, err := s.publishers.Get(ctx, record.PublisherID); err != nil {
 		_ = s.reserve.Restore(ctx, record)
 		return fmt.Errorf("get publisher %s: %w", record.PublisherID, err)
@@ -39,9 +57,27 @@ func (s *Service) Impression(ctx context.Context, auctionID string) error {
 		return fmt.Errorf("commit to bidder %s: %w", record.BidderID, err)
 	}
 
-	// Начисляем publisher'у долю.
+	// Начисляем publisher'у долю и кладём событие в outbox —
+	// атомарно, в одной транзакции.
 	publisherShare := record.Price * (100 - CommissionPercent) / 100
-	if err := s.publishers.AddBalance(ctx, record.PublisherID, publisherShare); err != nil {
+	platformFee := record.Price - publisherShare
+
+	evt := events.ImpressionEvent{
+		AuctionID:      record.AuctionID,
+		ImpID:          record.ImpID,
+		CampaignID:     record.CampaignID,
+		CreativeID:     record.CreativeID,
+		PublisherID:    record.PublisherID,
+		SlotID:         record.SlotID,
+		BidderID:       record.BidderID,
+		Price:          record.Price,
+		PublisherShare: publisherShare,
+		PlatformFee:    platformFee,
+		CreatedAt:      record.CreatedAt,
+		OccurredAt:     time.Now(),
+	}
+
+	if err := s.txManager.RecordImpression(ctx, record.PublisherID, publisherShare, evt); err != nil {
 		slog.ErrorContext(ctx, "CRITICAL: commit succeeded but publisher balance not credited",
 			"auction_id", auctionID,
 			"publisher_id", record.PublisherID,
@@ -50,7 +86,7 @@ func (s *Service) Impression(ctx context.Context, auctionID string) error {
 			"publisher_share", publisherShare,
 			"error", err,
 		)
-		return fmt.Errorf("add publisher balance: %w", err)
+		return fmt.Errorf("record impression: %w", err)
 	}
 
 	return nil

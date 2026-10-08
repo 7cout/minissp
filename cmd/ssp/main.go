@@ -9,14 +9,17 @@
 //	  - репозитории: in-memory
 //	  - слоты в кэше: нет (NoopSlotCache)
 //	  - резервы: MemoryManager (живут в памяти процесса)
+//	  - события: MemoryStore + NoopPublisher (публикации нет)
 //
 //	STORAGE=postgres:
 //	  - репозитории: PostgreSQL
 //	  - слоты в кэше: Redis (RedisSlotCache, TTL 5 минут)
 //	  - резервы: RedisManager (переживают рестарт, работают при нескольких инстансах)
+//	  - события: ssp.event_outbox + Kafka (franz-go)
 //
-// При STORAGE=postgres Redis обязателен: без него Impression не сможет
-// атомарно забрать запись, а воркер отката не увидит просроченные аукционы.
+// При STORAGE=postgres Redis и Kafka обязательны. Без Redis Impression
+// не может быть идемпотентным, а воркер не откатывает зависшие аукционы.
+// Без Kafka события Impression копятся в outbox и никогда не публикуются.
 package main
 
 import (
@@ -26,6 +29,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,6 +39,7 @@ import (
 	"github.com/7cout/minissp/internal/db"
 	"github.com/7cout/minissp/internal/ssp/bidder"
 	"github.com/7cout/minissp/internal/ssp/cache"
+	"github.com/7cout/minissp/internal/ssp/events"
 	"github.com/7cout/minissp/internal/ssp/handler"
 	"github.com/7cout/minissp/internal/ssp/repository/memory"
 	ssppostgres "github.com/7cout/minissp/internal/ssp/repository/postgres"
@@ -63,7 +68,7 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// 1. Зависимости: репозитории, кэш, резервы.
+	// 1. Зависимости: репозитории, кэш, резервы, события.
 	d, err := buildDeps(ctx)
 	if err != nil {
 		return fmt.Errorf("build deps: %w", err)
@@ -84,6 +89,7 @@ func run() error {
 		Bidders:    bidders,
 		SlotCache:  d.slotCache,
 		Reserve:    d.reserve,
+		TxManager:  d.txManager,
 	})
 	defer func() {
 		if err := svc.Close(); err != nil {
@@ -94,7 +100,11 @@ func run() error {
 	// 4. Worker отката просроченных резервов.
 	svc.StartReserveWorker(ctx)
 
-	// 5. gRPC-сервер с auth interceptor.
+	// 5. Worker публикации событий из outbox в Kafka.
+	evtWorker := events.NewWorker(d.eventStore, d.publisher, events.DefaultWorkerConfig())
+	go evtWorker.Run(ctx)
+
+	// 6. gRPC-сервер с auth interceptor.
 	authResolver := newPublisherResolver(d.publishers)
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(handler.AuthInterceptor(authResolver)),
@@ -102,14 +112,14 @@ func run() error {
 	pb.RegisterSspServiceServer(grpcServer, handler.NewSspServer(svc))
 	reflection.Register(grpcServer)
 
-	// 6. Слушаем.
+	// 7. Слушаем.
 	addr := getEnv("SSP_ADDR", defaultAddr)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", addr, err)
 	}
 
-	// 7. Запуск.
+	// 8. Запуск.
 	errCh := make(chan error, 1)
 	go func() {
 		slog.Info("SSP gRPC server listening", "addr", addr)
@@ -118,7 +128,7 @@ func run() error {
 		}
 	}()
 
-	// 8. Ждём сигнала или ошибки.
+	// 9. Ждём сигнала или ошибки.
 	select {
 	case <-ctx.Done():
 		slog.Info("shutdown signal received")
@@ -126,7 +136,7 @@ func run() error {
 		return err
 	}
 
-	// 9. Graceful shutdown.
+	// 10. Graceful shutdown.
 	done := make(chan struct{})
 	go func() {
 		grpcServer.GracefulStop()
@@ -150,10 +160,14 @@ type deps struct {
 	publishers service.PublisherRepository
 	slotCache  cache.SlotCache
 	reserve    reserve.Manager
+	txManager  service.TxManager
+	eventStore events.Store
+	publisher  events.Publisher
 	cleanup    func()
 }
 
-// buildDeps выбирает реализацию репозиториев, кэша и резервов по env STORAGE.
+// buildDeps выбирает реализацию репозиториев, кэша, резервов
+// и событий по env STORAGE.
 func buildDeps(ctx context.Context) (deps, error) {
 	switch getEnv("STORAGE", "memory") {
 	case "postgres":
@@ -163,12 +177,12 @@ func buildDeps(ctx context.Context) (deps, error) {
 	}
 }
 
-// buildPostgresDeps собирает продакшен-конфигурацию: Postgres + Redis.
+// buildPostgresDeps собирает продакшен-конфигурацию: Postgres + Redis + Kafka.
 //
-// Redis здесь обязателен. Если он недоступен — возвращаем ошибку,
+// Redis и Kafka обязательны. Если что-то недоступно — возвращаем ошибку,
 // чтобы сервис не стартовал в полурабочем состоянии. Иначе получится
-// SSP, который принимает RunAuction, но не может откатить просроченный
-// резерв при отсутствии Impression — деньги в DSP останутся заморожены.
+// SSP, который принимает Impression, но не может откатить просроченный
+// резерв (Redis) или теряет все события аналитики (Kafka).
 func buildPostgresDeps(ctx context.Context) (deps, error) {
 	pgCfg := db.PostgresConfig{
 		Host:     getEnv("POSTGRES_HOST", "localhost"),
@@ -191,12 +205,48 @@ func buildPostgresDeps(ctx context.Context) (deps, error) {
 	}
 	slog.Info("redis ready", "addr", redisAddr)
 
+	// Kafka обязательна для STORAGE=postgres: без неё события
+	// копятся в outbox и никогда не публикуются.
+	brokers := splitEnvList("KAFKA_BROKERS")
+	if len(brokers) == 0 {
+		_ = redisClient.Close()
+		pool.Close()
+		return deps{}, fmt.Errorf("KAFKA_BROKERS is required for STORAGE=postgres")
+	}
+	publisher, err := events.NewKafka(events.KafkaOptions{
+		Brokers:  brokers,
+		ClientID: "ssp",
+	})
+	if err != nil {
+		_ = redisClient.Close()
+		pool.Close()
+		return deps{}, fmt.Errorf("kafka: %w", err)
+	}
+	slog.Info("kafka publisher ready", "brokers", brokers)
+
+	// Проверяем доступность брокера. Не блокируем запуск:
+	// если брокер поднимется позже, первая публикация подождёт.
+	if err := publisher.Ping(ctx); err != nil {
+		slog.Warn("kafka ping failed — first publish may be slow",
+			"error", err,
+		)
+	} else {
+		slog.Info("kafka broker reachable")
+	}
+
+	eventStore := events.NewPostgresStore(pool)
+	txManager := ssppostgres.NewTxManager(pool)
+
 	return deps{
 		slots:      ssppostgres.NewSlotRepo(pool),
 		publishers: ssppostgres.NewPublisherRepo(pool),
 		slotCache:  cache.NewRedisSlotCache(redisClient, slotCacheTTL),
 		reserve:    reserve.NewRedis(redisClient, reserve.DefaultRedisOptions()),
+		txManager:  txManager,
+		eventStore: eventStore,
+		publisher:  publisher,
 		cleanup: func() {
+			_ = publisher.Close()
 			_ = redisClient.Close()
 			pool.Close()
 		},
@@ -205,8 +255,9 @@ func buildPostgresDeps(ctx context.Context) (deps, error) {
 
 // buildMemoryDeps собирает dev-конфигурацию: всё в памяти.
 //
-// Redis не нужен — репозитории in-memory, резервы в MemoryManager,
-// кэш слотов отключён. Данные теряются при перезапуске сервиса.
+// Redis и Kafka не нужны — репозитории in-memory, резервы
+// в MemoryManager, события в MemoryStore и никуда не публикуются.
+// Данные теряются при перезапуске сервиса.
 func buildMemoryDeps(ctx context.Context) (deps, error) {
 	slog.Info("storage: memory")
 
@@ -217,11 +268,16 @@ func buildMemoryDeps(ctx context.Context) (deps, error) {
 	}
 	slog.Info("seed data loaded", "publishers", 1, "slots", 1)
 
+	eventStore := events.NewMemoryStore()
+
 	return deps{
 		slots:      slots,
 		publishers: publishers,
 		slotCache:  cache.NoopSlotCache{},
 		reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
+		txManager:  memory.NewTxManager(publishers, eventStore),
+		eventStore: eventStore,
+		publisher:  events.NoopPublisher{},
 		cleanup:    func() {},
 	}, nil
 }
@@ -296,4 +352,23 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// splitEnvList читает переменную окружения как список значений,
+// разделённых запятыми. Пустые элементы и пробелы игнорируются.
+//
+// Пример: KAFKA_BROKERS="kafka-1:9092,kafka-2:9092" → ["kafka-1:9092", "kafka-2:9092"].
+func splitEnvList(key string) []string {
+	v := os.Getenv(key)
+	if v == "" {
+		return nil
+	}
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }

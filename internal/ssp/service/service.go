@@ -6,6 +6,7 @@ import (
 
 	"github.com/7cout/minissp/internal/ssp/cache"
 	"github.com/7cout/minissp/internal/ssp/domain"
+	"github.com/7cout/minissp/internal/ssp/events"
 	"github.com/7cout/minissp/internal/ssp/reserve"
 )
 
@@ -34,6 +35,19 @@ type BidderClient interface {
 	Close() error
 }
 
+// TxManager выполняет составные операции над хранилищами SSP
+// в одной транзакции.
+type TxManager interface {
+	// RecordImpression атомарно начисляет publisher'у долю
+	// и кладёт событие в outbox.
+	RecordImpression(
+		ctx context.Context,
+		publisherID string,
+		amount int64,
+		event events.ImpressionEvent,
+	) error
+}
+
 // CommissionPercent — комиссия платформы.
 const CommissionPercent int64 = 20
 
@@ -44,6 +58,7 @@ type Options struct {
 	Bidders    []BidderClient
 	SlotCache  cache.SlotCache
 	Reserve    reserve.Manager
+	TxManager  TxManager
 }
 
 // Service — сервис SSP.
@@ -54,11 +69,16 @@ type Service struct {
 	biddersBy  map[string]BidderClient
 	slotCache  cache.SlotCache
 	reserve    reserve.Manager
+	txManager  TxManager
 }
 
 // New создаёт сервис SSP.
 //
 // Если SlotCache не задан — используется NoopSlotCache.
+// Если TxManager не задан — используется fallback, который просто
+// начисляет баланс без outbox. Это для unit-тестов; в проде всегда
+// должен быть настоящий TxManager.
+//
 // Reserve обязателен: без него RunAuction/Impression не смогут
 // управлять резервами, и мы хотим узнать об этом сразу при старте,
 // а не в первом запросе.
@@ -77,6 +97,11 @@ func New(opts Options) *Service {
 		slotCache = cache.NoopSlotCache{}
 	}
 
+	txManager := opts.TxManager
+	if txManager == nil {
+		txManager = fallbackTxManager{publishers: opts.Publishers}
+	}
+
 	return &Service{
 		slots:      opts.Slots,
 		publishers: opts.Publishers,
@@ -84,6 +109,7 @@ func New(opts Options) *Service {
 		biddersBy:  by,
 		slotCache:  slotCache,
 		reserve:    opts.Reserve,
+		txManager:  txManager,
 	}
 }
 
@@ -96,4 +122,24 @@ func (s *Service) Close() error {
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// fallbackTxManager используется в unit-тестах: просто начисляет
+// баланс, событие никуда не пишется.
+//
+// В проде всегда должен использоваться настоящий TxManager —
+// memory или postgres. Fallback существует для тестов, где событие
+// в Kafka не проверяется.
+type fallbackTxManager struct {
+	publishers PublisherRepository
+}
+
+// RecordImpression начисляет баланс без записи в outbox.
+func (f fallbackTxManager) RecordImpression(
+	ctx context.Context,
+	publisherID string,
+	amount int64,
+	_ events.ImpressionEvent,
+) error {
+	return f.publishers.AddBalance(ctx, publisherID, amount)
 }

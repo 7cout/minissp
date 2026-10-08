@@ -59,7 +59,7 @@ tasks:
       - task: db:recreate:test
       - task: migrate:up:test
       - go test -tags=integration -race -count=1 ./...
-      
+
   # --- TEST DB ---
 
   db:recreate:test:
@@ -129,6 +129,19 @@ tasks:
       POSTGRES_DB: '{{.POSTGRES_DB}}'
     cmds:
       - go run ./cmd/seed
+
+# --- Kafka ---      
+
+  kafka:init:
+    desc: "Создать топик impression в Kafka (идемпотентно)"
+    cmds:
+      - >
+        docker exec -i minissp-kafka /opt/kafka/bin/kafka-topics.sh
+        --bootstrap-server localhost:9092
+        --create --if-not-exists
+        --topic impression
+        --partitions 3
+        --replication-factor 1
 
   # --- SSP ---
 
