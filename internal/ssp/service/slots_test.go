@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/7cout/minissp/internal/ssp/domain"
+	"github.com/7cout/minissp/internal/ssp/reserve"
 )
 
 func TestService_GetSlotByName(t *testing.T) {
@@ -41,6 +42,7 @@ func TestService_GetSlotByName_CacheAsides(t *testing.T) {
 		Publishers: pubs,
 		Bidders:    nil,
 		SlotCache:  cacheFake,
+		Reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
 	})
 	ctx := context.Background()
 
@@ -80,6 +82,7 @@ func TestService_GetSlotByName_CacheDown(t *testing.T) {
 		Publishers: pubs,
 		Bidders:    nil,
 		SlotCache:  cacheFake,
+		Reserve:    reserve.NewMemory(reserve.DefaultMemoryOptions()),
 	})
 
 	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))

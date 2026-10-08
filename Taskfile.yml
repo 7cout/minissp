@@ -48,10 +48,11 @@ tasks:
       - go test -race -count=1 ./...
 
   test:integration:
-    desc: "Интеграционные тесты с Postgres"
+    desc: "Интеграционные тесты: Postgres + Redis"
     dotenv: [deployments/.env]
     env:
       DATABASE_URL: 'postgres://{{.POSTGRES_USER}}:{{.POSTGRES_PASSWORD}}@{{.POSTGRES_HOST}}:{{.POSTGRES_PORT}}/{{.POSTGRES_DB}}?sslmode=disable'
+      REDIS_ADDR: '{{.REDIS_ADDR | default "localhost:6379"}}'
     cmds:
       - go test -tags=integration -race -count=1 ./...
 
