@@ -29,6 +29,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -112,7 +113,14 @@ func run() error {
 	svc.StartReserveWorker(ctx)
 
 	// 6. Worker публикации событий из outbox в Kafka.
-	evtWorker := events.NewWorker(d.eventStore, d.publisher, events.DefaultWorkerConfig())
+	evtCfg := events.DefaultWorkerConfig()
+	if v := getEnvInt("EVENTS_BATCH_SIZE", 0); v > 0 {
+		evtCfg.BatchSize = v
+	}
+	if v := getEnvDuration("EVENTS_POLL_INTERVAL", 0); v > 0 {
+		evtCfg.PollInterval = v
+	}
+	evtWorker := events.NewWorker(d.eventStore, d.publisher, evtCfg)
 	go evtWorker.Run(ctx)
 
 	// 7. gRPC-сервер с auth interceptor.
@@ -386,4 +394,22 @@ func splitEnvList(key string) []string {
 		}
 	}
 	return out
+}
+
+func getEnvDuration(key string, fallback time.Duration) time.Duration {
+	if v := os.Getenv(key); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
+		}
+	}
+	return fallback
+}
+
+func getEnvInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return fallback
 }

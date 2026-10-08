@@ -153,6 +153,8 @@ tasks:
       DSP_API_KEY: '{{.DSP_API_KEY}}'
       DSP_NIKE_ADDR: '{{.DSP_NIKE_ADDR}}'
       METRICS_ADDR: '{{.METRICS_ADDR | default ":9100"}}'
+      EVENTS_BATCH_SIZE: '{{.EVENTS_BATCH_SIZE | default "500"}}'
+      EVENTS_POLL_INTERVAL: '{{.EVENTS_POLL_INTERVAL | default "1s"}}'
     cmds:
       - go run ./cmd/ssp
 
@@ -170,6 +172,8 @@ tasks:
       POSTGRES_PASSWORD: '{{.POSTGRES_PASSWORD}}'
       POSTGRES_DB: '{{.POSTGRES_DB}}'
       METRICS_ADDR: '{{.METRICS_ADDR | default ":9100"}}'
+      EVENTS_BATCH_SIZE: '{{.EVENTS_BATCH_SIZE | default "500"}}'
+      EVENTS_POLL_INTERVAL: '{{.EVENTS_POLL_INTERVAL | default "1s"}}'
     cmds:
       - go run ./cmd/ssp
 
@@ -212,6 +216,20 @@ tasks:
       SSP_API_KEY: '{{.DSP_API_KEY}}'
     cmds:
       - go run ./cmd/publisher --rps {{.RPS | default "1"}} --duration {{.DURATION | default "10s"}} --verbose
+
+  loadgen:
+    desc: "Нагрузочный тест: N publisher'ов с случайным RPS"
+    dotenv: [deployments/.env]
+    env:
+      SSP_API_KEY: '{{.DSP_API_KEY}}'
+    cmds:
+      - >
+        go run ./cmd/loadgen
+        --count {{.COUNT | default "20"}}
+        --rps-min {{.RPS_MIN | default "1"}}
+        --rps-max {{.RPS_MAX | default "10"}}
+        --duration {{.DURATION | default "30s"}}
+        {{if eq .VERBOSE "true"}}--verbose{{end}}
 
   all:
     desc: "Полный цикл проверок: fmt - lint - test"
