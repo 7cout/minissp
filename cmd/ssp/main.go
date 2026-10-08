@@ -2,6 +2,10 @@
 //
 // Хранилище выбирается env STORAGE: memory (по умолчанию) или postgres.
 // Для postgres seed не заливается автоматически — используй cmd/seed.
+//
+// Кэш слотов: NoopSlotCache для memory, RedisSlotCache для postgres.
+// Если Redis недоступен — сервис стартует с NoopSlotCache
+// и предупреждением в логах.
 package main
 
 import (
@@ -19,6 +23,7 @@ import (
 
 	"github.com/7cout/minissp/internal/db"
 	"github.com/7cout/minissp/internal/ssp/bidder"
+	"github.com/7cout/minissp/internal/ssp/cache"
 	"github.com/7cout/minissp/internal/ssp/handler"
 	"github.com/7cout/minissp/internal/ssp/repository/memory"
 	ssppostgres "github.com/7cout/minissp/internal/ssp/repository/postgres"
@@ -32,6 +37,7 @@ const (
 	shutdownTimeout = 10 * time.Second
 	rollbackTick    = 5 * time.Second
 	warmUpTimeout   = 3 * time.Second
+	slotCacheTTL    = 5 * time.Minute
 )
 
 func main() {
@@ -45,12 +51,12 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// 1. Хранилище.
-	slots, publishers, cleanup, err := buildStorage(ctx)
+	// 1. Хранилище + кэш.
+	d, err := buildDeps(ctx)
 	if err != nil {
-		return fmt.Errorf("build storage: %w", err)
+		return fmt.Errorf("build deps: %w", err)
 	}
-	defer cleanup()
+	defer d.cleanup()
 
 	// 2. Клиенты к DSP.
 	bidders, err := buildBidders(ctx)
@@ -60,7 +66,12 @@ func run() error {
 	slog.Info("dsp clients ready", "count", len(bidders))
 
 	// 3. Сервис SSP.
-	svc := service.New(slots, publishers, bidders)
+	svc := service.New(service.Options{
+		Slots:      d.slots,
+		Publishers: d.publishers,
+		Bidders:    bidders,
+		SlotCache:  d.slotCache,
+	})
 	defer func() {
 		if err := svc.Close(); err != nil {
 			slog.Error("close service", "error", err)
@@ -71,7 +82,7 @@ func run() error {
 	svc.StartRollbackWorker(ctx, rollbackTick)
 
 	// 5. gRPC-сервер с auth interceptor.
-	authResolver := newPublisherResolver(publishers)
+	authResolver := newPublisherResolver(d.publishers)
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(handler.AuthInterceptor(authResolver)),
 	)
@@ -120,18 +131,22 @@ func run() error {
 	return nil
 }
 
-// buildStorage выбирает реализацию репозиториев по env STORAGE.
+// deps — собранные зависимости SSP.
+type deps struct {
+	slots      service.SlotRepository
+	publishers service.PublisherRepository
+	slotCache  cache.SlotCache
+	cleanup    func()
+}
+
+// buildDeps выбирает реализацию репозиториев и кэша по env STORAGE.
 //
-// Для memory заливает seed-данные при старте. Для postgres seed
-// не заливается — это отдельная команда cmd/seed.
+// memory: репозиторий в памяти, seed заливается при старте,
+// slot cache не нужен (Noop).
 //
-// Возвращает slots, publishers и cleanup-функцию (закрыть пул).
-func buildStorage(ctx context.Context) (
-	service.SlotRepository,
-	service.PublisherRepository,
-	func(),
-	error,
-) {
+// postgres: репозиторий в Postgres, seed — отдельной командой,
+// slot cache — Redis (если доступен, иначе Noop с warning).
+func buildDeps(ctx context.Context) (deps, error) {
 	switch getEnv("STORAGE", "memory") {
 	case "postgres":
 		cfg := db.PostgresConfig{
@@ -143,32 +158,63 @@ func buildStorage(ctx context.Context) (
 		}
 		pool, err := db.NewPostgresPool(ctx, cfg)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("postgres pool: %w", err)
+			return deps{}, fmt.Errorf("postgres pool: %w", err)
 		}
 		slog.Info("storage: postgres")
 
-		slots := ssppostgres.NewSlotRepo(pool)
-		publishers := ssppostgres.NewPublisherRepo(pool)
-		return slots, publishers, pool.Close, nil
+		slotCache, cacheCleanup := buildSlotCache(ctx)
+
+		return deps{
+			slots:      ssppostgres.NewSlotRepo(pool),
+			publishers: ssppostgres.NewPublisherRepo(pool),
+			slotCache:  slotCache,
+			cleanup: func() {
+				cacheCleanup()
+				pool.Close()
+			},
+		}, nil
 
 	default:
 		slog.Info("storage: memory")
 		publishers := memory.NewPublisherRepo()
 		slots := memory.NewSlotRepo()
 		if err := seed.Populate(ctx, publishers, slots); err != nil {
-			return nil, nil, nil, fmt.Errorf("seed memory: %w", err)
+			return deps{}, fmt.Errorf("seed memory: %w", err)
 		}
 		slog.Info("seed data loaded", "publishers", 1, "slots", 1)
-		return slots, publishers, func() {}, nil
+
+		return deps{
+			slots:      slots,
+			publishers: publishers,
+			slotCache:  cache.NoopSlotCache{},
+			cleanup:    func() {},
+		}, nil
 	}
+}
+
+// buildSlotCache подключается к Redis.
+//
+// Если Redis недоступен — не блокируем запуск SSP: логируем warning
+// и возвращаем NoopSlotCache. Бизнес продолжит работать через
+// Postgres, просто без кэша.
+func buildSlotCache(ctx context.Context) (cache.SlotCache, func()) {
+	addr := getEnv("REDIS_ADDR", "localhost:6379")
+
+	client, err := db.NewRedisClient(ctx, db.RedisConfig{Addr: addr})
+	if err != nil {
+		slog.Warn("redis not available — slot cache disabled",
+			"addr", addr,
+			"error", err,
+		)
+		return cache.NoopSlotCache{}, func() {}
+	}
+
+	slog.Info("slot cache: redis", "addr", addr)
+	return cache.NewRedisSlotCache(client, slotCacheTTL), func() { _ = client.Close() }
 }
 
 // buildBidders создаёт gRPC-клиентов ко всем известным DSP
 // и прогревает соединения.
-//
-// grpc.NewClient ленивый: реальное подключение устанавливается на
-// первом RPC. Без WarmUp первый RunAuction после старта SSP висит
-// на handshake до клиентского таймаута Publisher'а.
 func buildBidders(ctx context.Context) ([]service.BidderClient, error) {
 	type dspConfig struct {
 		name   string
@@ -179,7 +225,7 @@ func buildBidders(ctx context.Context) ([]service.BidderClient, error) {
 	configs := []dspConfig{
 		{
 			name:   "dsp-nike",
-			addr:   getEnv("DSP_NIKE_ADDR", "localhost:50052"),
+			addr:   getEnv("DSP_NIKE_ADDR", "127.0.0.1:50052"),
 			apiKey: getEnv("DSP_API_KEY", ""),
 		},
 	}

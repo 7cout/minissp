@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -15,6 +16,7 @@ import (
 	dspseed "github.com/7cout/minissp/internal/dsp/seed"
 	dspservice "github.com/7cout/minissp/internal/dsp/service"
 	"github.com/7cout/minissp/internal/ssp/bidder"
+	"github.com/7cout/minissp/internal/ssp/cache"
 	"github.com/7cout/minissp/internal/ssp/domain"
 	sspmemory "github.com/7cout/minissp/internal/ssp/repository/memory"
 	sspseed "github.com/7cout/minissp/internal/ssp/seed"
@@ -25,7 +27,8 @@ import (
 const e2eTestAPIKey = "e2e_secret_key"
 
 // e2eFixture собирает всю связку: реальный DSP-сервер на bufconn,
-// реальный bidder.Client, реальный SSP-сервис с in-memory репозиториями.
+// реальный bidder.Client, реальный SSP-сервис с in-memory репозиториями
+// и in-memory кэшем слотов.
 //
 // Всё как в продакшене, кроме транспорта: bufconn вместо TCP.
 type e2eFixture struct {
@@ -85,7 +88,12 @@ func newE2EFixture(t *testing.T) *e2eFixture {
 		t.Fatalf("seed ssp: %v", err)
 	}
 
-	sspSvc := New(slots, publishers, []BidderClient{dspClient})
+	sspSvc := New(Options{
+		Slots:      slots,
+		Publishers: publishers,
+		Bidders:    []BidderClient{dspClient},
+		SlotCache:  cache.NewMemorySlotCache(time.Minute),
+	})
 	t.Cleanup(func() { _ = sspSvc.Close() })
 
 	return &e2eFixture{

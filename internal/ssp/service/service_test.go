@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/7cout/minissp/internal/ssp/cache"
 	"github.com/7cout/minissp/internal/ssp/domain"
 )
 
@@ -37,13 +38,13 @@ func (f *fakeSlotRepo) AddIfAbsent(_ context.Context, slot *domain.Slot) (*domai
 
 	for _, s := range f.slots {
 		if s.PublisherID == slot.PublisherID && s.Name == slot.Name {
-			cp := *s
+			cp := s.Clone()
 			return &cp, false, nil
 		}
 	}
 
 	f.slots[slot.ID] = slot
-	cp := *slot
+	cp := slot.Clone()
 	return &cp, true, nil
 }
 
@@ -58,7 +59,7 @@ func (f *fakeSlotRepo) Get(_ context.Context, id string) (*domain.Slot, error) {
 	if !ok {
 		return nil, domain.ErrSlotNotFound
 	}
-	cp := *s
+	cp := s.Clone()
 	return &cp, nil
 }
 
@@ -71,11 +72,61 @@ func (f *fakeSlotRepo) GetByName(_ context.Context, publisherID, name string) (*
 
 	for _, s := range f.slots {
 		if s.PublisherID == publisherID && s.Name == name {
-			cp := *s
+			cp := s.Clone()
 			return &cp, nil
 		}
 	}
 	return nil, domain.ErrSlotNotFound
+}
+
+// --- fakeSlotCache ---
+
+// fakeSlotCache — минимальный in-memory кэш без TTL.
+//
+// Позволяет тестировать cache-aside и сценарий «кэш упал»:
+// getErr/putErr возвращают ошибку без ErrCacheMiss.
+type fakeSlotCache struct {
+	mu      sync.Mutex
+	entries map[string]domain.Slot
+
+	getErr error
+	putErr error
+}
+
+func newFakeSlotCache() *fakeSlotCache {
+	return &fakeSlotCache{entries: make(map[string]domain.Slot)}
+}
+
+func (c *fakeSlotCache) Get(_ context.Context, publisherID, name string) (*domain.Slot, error) {
+	if c.getErr != nil {
+		return nil, c.getErr
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	slot, ok := c.entries[publisherID+":"+name]
+	if !ok {
+		return nil, cache.ErrCacheMiss
+	}
+	cp := slot.Clone()
+	return &cp, nil
+}
+
+func (c *fakeSlotCache) Put(_ context.Context, slot *domain.Slot) error {
+	if c.putErr != nil {
+		return c.putErr
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.entries[slot.PublisherID+":"+slot.Name] = slot.Clone()
+	return nil
+}
+
+func (c *fakeSlotCache) Invalidate(_ context.Context, publisherID, name string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.entries, publisherID+":"+name)
+	return nil
 }
 
 // --- fakePublisherRepo ---
@@ -278,7 +329,7 @@ func testBidder(name, campaignID string, price int64) *fakeBidder {
 	}
 }
 
-// newTestService собирает сервис с моками и одним баннер-слотом.
+// newTestService собирает сервис с моками и in-memory фейк-кэшем.
 func newTestService(bidders ...*fakeBidder) (*Service, *fakeSlotRepo, *fakePublisherRepo) {
 	slots := newFakeSlotRepo()
 	pubs := newFakePublisherRepo()
@@ -288,7 +339,12 @@ func newTestService(bidders ...*fakeBidder) (*Service, *fakeSlotRepo, *fakePubli
 		clientList = append(clientList, b)
 	}
 
-	return New(slots, pubs, clientList), slots, pubs
+	return New(Options{
+		Slots:      slots,
+		Publishers: pubs,
+		Bidders:    clientList,
+		SlotCache:  newFakeSlotCache(),
+	}), slots, pubs
 }
 
 func TestService_RegisterSlot_Concurrent(t *testing.T) {

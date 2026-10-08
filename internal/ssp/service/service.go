@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/7cout/minissp/internal/ssp/cache"
 	"github.com/7cout/minissp/internal/ssp/domain"
 )
 
@@ -46,12 +47,25 @@ const (
 	ProcessedTTL = 10 * time.Minute
 )
 
+// Options — зависимости сервиса SSP.
+//
+// Именованные поля вместо позиционных аргументов: конструктор
+// не разрастается при добавлении новых зависимостей (метрики,
+// reserve manager и т.д.), вызовы в тестах читаются понятнее.
+type Options struct {
+	Slots      SlotRepository
+	Publishers PublisherRepository
+	Bidders    []BidderClient
+	SlotCache  cache.SlotCache
+}
+
 // Service — сервис SSP.
 type Service struct {
 	slots      SlotRepository
 	publishers PublisherRepository
 	bidders    []BidderClient
 	biddersBy  map[string]BidderClient // name → client, для быстрого поиска
+	slotCache  cache.SlotCache
 
 	mu        sync.RWMutex
 	auctions  map[string]domain.AuctionRecord
@@ -59,20 +73,26 @@ type Service struct {
 }
 
 // New создаёт сервис SSP.
-func New(
-	slots SlotRepository,
-	publishers PublisherRepository,
-	bidders []BidderClient,
-) *Service {
-	by := make(map[string]BidderClient, len(bidders))
-	for _, b := range bidders {
+//
+// Если SlotCache не задан — используется NoopSlotCache,
+// сервис работает без кэша.
+func New(opts Options) *Service {
+	by := make(map[string]BidderClient, len(opts.Bidders))
+	for _, b := range opts.Bidders {
 		by[b.Name()] = b
 	}
+
+	slotCache := opts.SlotCache
+	if slotCache == nil {
+		slotCache = cache.NoopSlotCache{}
+	}
+
 	return &Service{
-		slots:      slots,
-		publishers: publishers,
-		bidders:    bidders,
+		slots:      opts.Slots,
+		publishers: opts.Publishers,
+		bidders:    opts.Bidders,
 		biddersBy:  by,
+		slotCache:  slotCache,
 		auctions:   make(map[string]domain.AuctionRecord),
 		processed:  make(map[string]time.Time),
 	}

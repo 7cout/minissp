@@ -29,6 +29,70 @@ func TestService_GetSlotByName_NotFound(t *testing.T) {
 	}
 }
 
+// TestService_GetSlotByName_CacheAsides проверяет, что после первого
+// GetSlotByName слот попал в кэш и второй вызов уже не идёт в репозиторий.
+func TestService_GetSlotByName_CacheAsides(t *testing.T) {
+	slots := newFakeSlotRepo()
+	pubs := newFakePublisherRepo()
+	cacheFake := newFakeSlotCache()
+
+	svc := New(Options{
+		Slots:      slots,
+		Publishers: pubs,
+		Bidders:    nil,
+		SlotCache:  cacheFake,
+	})
+	ctx := context.Background()
+
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
+
+	// Первый Get — промах, идём в репозиторий, кладём в кэш.
+	if _, err := svc.GetSlotByName(ctx, "pub_1", "home_banner"); err != nil {
+		t.Fatalf("first get: %v", err)
+	}
+
+	// Удаляем слот из репозитория: если сервис работает через кэш,
+	// второй Get всё равно вернёт слот.
+	slots.mu.Lock()
+	delete(slots.slots, "slot_1")
+	slots.mu.Unlock()
+
+	got, err := svc.GetSlotByName(ctx, "pub_1", "home_banner")
+	if err != nil {
+		t.Fatalf("second get: %v", err)
+	}
+	if got.ID != "slot_1" {
+		t.Errorf("id = %q, want slot_1", got.ID)
+	}
+}
+
+// TestService_GetSlotByName_CacheDown — если кэш упал, сервис
+// продолжает работать через репозиторий.
+func TestService_GetSlotByName_CacheDown(t *testing.T) {
+	slots := newFakeSlotRepo()
+	pubs := newFakePublisherRepo()
+	cacheFake := newFakeSlotCache()
+	cacheFake.getErr = errors.New("redis down")
+	cacheFake.putErr = errors.New("redis down")
+
+	svc := New(Options{
+		Slots:      slots,
+		Publishers: pubs,
+		Bidders:    nil,
+		SlotCache:  cacheFake,
+	})
+
+	addSlot(t, slots, testBannerSlot("slot_1", "pub_1", "home_banner"))
+
+	got, err := svc.GetSlotByName(context.Background(), "pub_1", "home_banner")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ID != "slot_1" {
+		t.Errorf("id = %q, want slot_1", got.ID)
+	}
+}
+
 func TestService_RegisterSlot_HappyPath(t *testing.T) {
 	svc, _, _ := newTestService()
 
