@@ -47,20 +47,45 @@ tasks:
     cmds:
       - go test -race -count=1 ./...
 
-  migrate:up:
-    desc: "Применить все миграции"
-    cmds:
-      - goose -dir internal/db/migrations postgres "{{.DATABASE_URL}}" up
+  # --- MIGRATE ---
 
-  migrate:down:
-    desc: "Откатить последнюю миграцию"
+  migrate:up:
+    desc: "Применить все миграции (SSP + DSP)"
+    dotenv: [deployments/.env]
     cmds:
-      - goose -dir internal/db/migrations postgres "{{.DATABASE_URL}}" down
+      - task: migrate:up:ssp
+      - task: migrate:up:dsp
+
+  migrate:up:ssp:
+    desc: "Применить миграции SSP"
+    dotenv: [deployments/.env]
+    cmds:
+      - goose -dir internal/db/migrations/ssp -table goose_ssp postgres "{{.DATABASE_URL}}" up
+
+  migrate:up:dsp:
+    desc: "Применить миграции DSP"
+    dotenv: [deployments/.env]
+    cmds:
+      - goose -dir internal/db/migrations/dsp -table goose_dsp postgres "{{.DATABASE_URL}}" up
+
+  migrate:down:ssp:
+    desc: "Откатить последнюю миграцию SSP"
+    dotenv: [deployments/.env]
+    cmds:
+      - goose -dir internal/db/migrations/ssp -table goose_ssp postgres "{{.DATABASE_URL}}" down
+
+  migrate:down:dsp:
+    desc: "Откатить последнюю миграцию DSP"
+    dotenv: [deployments/.env]
+    cmds:
+      - goose -dir internal/db/migrations/dsp -table goose_dsp postgres "{{.DATABASE_URL}}" down
 
   migrate:status:
-    desc: "Показать статус миграций"
+    desc: "Статус всех миграций"
+    dotenv: [deployments/.env]
     cmds:
-      - goose -dir internal/db/migrations postgres "{{.DATABASE_URL}}" status
+      - goose -dir internal/db/migrations/ssp -table goose_ssp postgres "{{.DATABASE_URL}}" status
+      - goose -dir internal/db/migrations/dsp -table goose_dsp postgres "{{.DATABASE_URL}}" status
 
   # --- SSP ---
 
