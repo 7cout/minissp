@@ -59,8 +59,14 @@ type Service struct {
 // New создаёт сервис SSP.
 //
 // Если SlotCache не задан — используется NoopSlotCache.
-// Reserve обязателен.
+// Reserve обязателен: без него RunAuction/Impression не смогут
+// управлять резервами, и мы хотим узнать об этом сразу при старте,
+// а не в первом запросе.
 func New(opts Options) *Service {
+	if opts.Reserve == nil {
+		panic("ssp/service: Options.Reserve is required")
+	}
+
 	by := make(map[string]BidderClient, len(opts.Bidders))
 	for _, b := range opts.Bidders {
 		by[b.Name()] = b
