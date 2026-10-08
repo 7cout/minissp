@@ -30,7 +30,7 @@ const slotColumns = `
 
 // Get возвращает слот по ID.
 func (r *SlotRepo) Get(ctx context.Context, id string) (*domain.Slot, error) {
-	q := `SELECT ` + slotColumns + ` FROM ad_slots WHERE id = $1`
+	q := `SELECT ` + slotColumns + ` FROM ssp.ad_slots WHERE id = $1`
 
 	slot, err := scanSlot(r.pool.QueryRow(ctx, q, id))
 	if err != nil {
@@ -45,7 +45,7 @@ func (r *SlotRepo) Get(ctx context.Context, id string) (*domain.Slot, error) {
 // GetByName возвращает слот по (publisher_id, name).
 func (r *SlotRepo) GetByName(ctx context.Context, publisherID, name string) (*domain.Slot, error) {
 	q := `SELECT ` + slotColumns + `
-		FROM ad_slots
+		FROM ssp.ad_slots
 		WHERE publisher_id = $1 AND name = $2`
 
 	slot, err := scanSlot(r.pool.QueryRow(ctx, q, publisherID, name))
@@ -64,7 +64,7 @@ func (r *SlotRepo) GetByName(ctx context.Context, publisherID, name string) (*do
 // Для конкурентной регистрации по (publisher_id, name) — AddIfAbsent.
 func (r *SlotRepo) Add(ctx context.Context, slot *domain.Slot) error {
 	q := `
-		INSERT INTO ad_slots (
+		INSERT INTO ssp.ad_slots (
 			id, publisher_id, name, geo, min_price, type,
 			banner_width, banner_height,
 			video_width, video_height, video_duration, video_mimes
@@ -91,7 +91,7 @@ func (r *SlotRepo) Add(ctx context.Context, slot *domain.Slot) error {
 //   - (slot, false, nil) — слот уже был, возвращаем существующий.
 func (r *SlotRepo) AddIfAbsent(ctx context.Context, slot *domain.Slot) (*domain.Slot, bool, error) {
 	q := `
-		INSERT INTO ad_slots (
+		INSERT INTO ssp.ad_slots (
 			id, publisher_id, name, geo, min_price, type,
 			banner_width, banner_height,
 			video_width, video_height, video_duration, video_mimes

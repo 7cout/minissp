@@ -25,7 +25,7 @@ func NewPublisherRepo(pool *pgxpool.Pool) *PublisherRepo {
 func (r *PublisherRepo) Get(ctx context.Context, id string) (*domain.Publisher, error) {
 	const q = `
 		SELECT id, name, api_key, balance
-		FROM publishers
+		FROM ssp.publishers
 		WHERE id = $1
 	`
 
@@ -44,7 +44,7 @@ func (r *PublisherRepo) Get(ctx context.Context, id string) (*domain.Publisher, 
 func (r *PublisherRepo) GetByAPIKey(ctx context.Context, apiKey string) (*domain.Publisher, error) {
 	const q = `
 		SELECT id, name, api_key, balance
-		FROM publishers
+		FROM ssp.publishers
 		WHERE api_key = $1
 	`
 
@@ -65,7 +65,7 @@ func (r *PublisherRepo) GetByAPIKey(ctx context.Context, apiKey string) (*domain
 // unique violation. Используется только из seed.
 func (r *PublisherRepo) Add(ctx context.Context, p *domain.Publisher) error {
 	const q = `
-		INSERT INTO publishers (id, name, api_key, balance)
+		INSERT INTO ssp.publishers (id, name, api_key, balance)
 		VALUES ($1, $2, $3, $4)
 	`
 
@@ -79,7 +79,7 @@ func (r *PublisherRepo) Add(ctx context.Context, p *domain.Publisher) error {
 // AddBalance атомарно увеличивает баланс издателя.
 func (r *PublisherRepo) AddBalance(ctx context.Context, id string, amount int64) error {
 	const q = `
-		UPDATE publishers
+		UPDATE ssp.publishers
 		SET balance    = balance + $2,
 		    updated_at = now()
 		WHERE id = $1

@@ -213,7 +213,7 @@ func TestPostgresSlotRepo_AddIfAbsent_ReturnsExisting(t *testing.T) {
 	// В БД должен быть ровно один слот.
 	var count int
 	if err := pool.QueryRow(ctx,
-		`SELECT count(*) FROM ad_slots WHERE publisher_id = $1 AND name = $2`,
+		`SELECT count(*) FROM ssp.ad_slots WHERE publisher_id = $1 AND name = $2`,
 		pub.ID, "home_banner",
 	).Scan(&count); err != nil {
 		t.Fatalf("count: %v", err)
@@ -283,7 +283,7 @@ func TestPostgresSlotRepo_AddIfAbsent_Concurrent(t *testing.T) {
 	// В БД — ровно один слот.
 	var count int
 	if err := pool.QueryRow(ctx,
-		`SELECT count(*) FROM ad_slots WHERE publisher_id = $1 AND name = $2`,
+		`SELECT count(*) FROM ssp.ad_slots WHERE publisher_id = $1 AND name = $2`,
 		pub.ID, "home_banner",
 	).Scan(&count); err != nil {
 		t.Fatalf("count: %v", err)

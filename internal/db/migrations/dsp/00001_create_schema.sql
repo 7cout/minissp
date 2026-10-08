@@ -1,0 +1,5 @@
+-- +goose Up
+CREATE SCHEMA IF NOT EXISTS dsp;
+
+-- +goose Down
+DROP SCHEMA IF EXISTS dsp CASCADE;

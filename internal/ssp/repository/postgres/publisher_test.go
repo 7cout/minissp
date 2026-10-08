@@ -30,7 +30,7 @@ func newTestPool(t *testing.T) *pgxpool.Pool {
 	}
 	t.Cleanup(pool.Close)
 
-	if _, err := pool.Exec(context.Background(), `TRUNCATE publishers CASCADE`); err != nil {
+	if _, err := pool.Exec(context.Background(), `TRUNCATE ssp.publishers CASCADE`); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 	return pool
