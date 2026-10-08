@@ -95,6 +95,20 @@ tasks:
       - goose -dir internal/db/migrations/ssp -table goose_ssp postgres "{{.DATABASE_URL}}" status
       - goose -dir internal/db/migrations/dsp -table goose_dsp postgres "{{.DATABASE_URL}}" status
 
+  # --- SEED ---
+
+  seed:
+    desc: "Залить seed-данные в PostgreSQL"
+    dotenv: [deployments/.env]
+    env:
+      POSTGRES_HOST: '{{.POSTGRES_HOST}}'
+      POSTGRES_PORT: '{{.POSTGRES_PORT}}'
+      POSTGRES_USER: '{{.POSTGRES_USER}}'
+      POSTGRES_PASSWORD: '{{.POSTGRES_PASSWORD}}'
+      POSTGRES_DB: '{{.POSTGRES_DB}}'
+    cmds:
+      - go run ./cmd/seed
+
   # --- SSP ---
 
   run:ssp:
@@ -107,14 +121,21 @@ tasks:
     cmds:
       - go run ./cmd/ssp
 
-  # TODO: раскомментировать и дописать команду, когда появится cmd/ssp с Postgres.
-  # run:ssp:postgres:
-  #   desc: "Запустить SSP с PostgreSQL"
-  #   dotenv: [deployments/.env]
-  #   env:
-  #     STORAGE: postgres
-  #   cmds:
-  #     - go run ./cmd/ssp
+  run:ssp:postgres:
+    desc: "Запустить SSP с PostgreSQL"
+    dotenv: [deployments/.env]
+    env:
+      STORAGE: postgres
+      SSP_ADDR: '{{.SSP_ADDR | default ":50051"}}'
+      DSP_API_KEY: '{{.DSP_API_KEY}}'
+      DSP_NIKE_ADDR: '{{.DSP_NIKE_ADDR}}'
+      POSTGRES_HOST: '{{.POSTGRES_HOST}}'
+      POSTGRES_PORT: '{{.POSTGRES_PORT}}'
+      POSTGRES_USER: '{{.POSTGRES_USER}}'
+      POSTGRES_PASSWORD: '{{.POSTGRES_PASSWORD}}'
+      POSTGRES_DB: '{{.POSTGRES_DB}}'
+    cmds:
+      - go run ./cmd/ssp
 
   # --- DSP ---
 
