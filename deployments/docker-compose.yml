@@ -41,11 +41,19 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+
+      # Два внешних слушателя + один для controller'а:
+      #   PLAINTEXT (9092)  — для клиентов с хоста (SSP, Publisher, kafka:init)
+      #   INTERNAL (29092)  — для клиентов внутри docker-сети (Kafka UI)
+      #   CONTROLLER (9093) — внутренний, для quorum KRaft
+      KAFKA_LISTENERS: PLAINTEXT://:9092,INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -69,10 +77,14 @@ services:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      # Kafka UI живёт в docker-сети, поэтому коннектится через INTERNAL-листенер.
+      # Адрес kafka:29092 совпадает с KAFKA_ADVERTISED_LISTENERS INTERNAL,
+      # поэтому metadata, которую брокер вернёт клиенту, тоже указывает
+      # на достижимый из контейнера адрес.
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     depends_on:
       kafka:
-        condition: service_healthy      
+        condition: service_healthy
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.3-alpine
