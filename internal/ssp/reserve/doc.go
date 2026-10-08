@@ -8,13 +8,18 @@
 //
 //	RunAuction:  Reserve(record)             → в резерве
 //	Impression:  Consume(id) = ConsumeFresh  → в обработке
-//	             Commit+AddBalance успешно   → processed (идемпотентный повтор безопасен)
+//	             Commit+AddBalance успешно   → processed (повтор безопасен)
 //	             Commit/AddBalance упал      → Restore(record)
 //	TTL истёк:   Tick/Subscribe → onExpired  → Rollback в биддер
 //
 // Гарантия: для одного auction_id Consume успешно срабатывает ровно
 // один раз, даже при гонке Impression и TTL-воркера.
 //
-// Две реализации: MemoryManager (для STORAGE=memory и тестов) и
-// RedisManager (для STORAGE=postgres, переживает рестарт сервиса).
+// Реализации:
+//   - MemoryManager — in-memory, для STORAGE=memory и тестов;
+//   - RedisManager  — Redis, для STORAGE=postgres; резервы переживают
+//     рестарт сервиса и корректно работают при нескольких инстансах SSP.
+//
+// RedisManager использует Lua-скрипты для атомарности и sorted set
+// для отслеживания дедлайнов. См. комментарии в redis.go.
 package reserve
