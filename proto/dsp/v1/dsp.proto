@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package dsp.v1;
+
+option go_package = "github.com/7cout/minissp/proto/gen/dsp/v1;dspv1";
+
+// DspService — эмулятор DSP (Demand-Side Platform).
+// Принимает запросы от SSP, делает ставки, управляет бюджетом.
+service DspService {
+  // GetBid запрашивает ставку у DSP для конкретного показа.
+  rpc GetBid (BidRequest) returns (BidResponse);
+
+  // Commit подтверждает списание бюджета после показа.
+  rpc Commit (CommitRequest) returns (CommitResponse);
+
+  // Rollback отменяет резерв.
+  rpc Rollback (RollbackRequest) returns (RollbackResponse);
+}
+
+// --- Типы контента ---
+
+// CreativeType — тип рекламного материала.
+enum CreativeType {
+  CREATIVE_TYPE_UNSPECIFIED = 0;
+  CREATIVE_TYPE_BANNER      = 1;
+  CREATIVE_TYPE_VIDEO       = 2;
+  CREATIVE_TYPE_NATIVE      = 3;
+  CREATIVE_TYPE_AUDIO       = 4;
+}
+
+// Banner — параметры баннерного креатива.
+message Banner {
+  int32 width  = 1;
+  int32 height = 2;
+}
+
+// Video — параметры видеокреатива.
+message Video {
+  int32 width    = 1;
+  int32 height   = 2;
+  int32 duration = 3;      // в секундах
+  repeated string mimes = 4;
+}
+
+// Native — параметры нативного креатива (заглушка).
+message Native {}
+
+// Audio — параметры аудиокреатива (заглушка).
+message Audio {}
+
+// --- GetBid ---
+
+// BidRequest — контекст показа, который SSP передаёт DSP.
+message BidRequest {
+  string request_id = 1;
+  string imp_id     = 2;
+  string slot_id    = 3;
+  string geo        = 4;
+  int64  bid_floor  = 5;   // минимальная цена в микроединицах
+  string user_id    = 6;   // опционально
+
+  // Тип слота и его параметры.
+  CreativeType type   = 7;
+  Banner       banner = 8;   // если type = BANNER
+  Video        video  = 9;   // если type = VIDEO
+  Native       native = 10;  // если type = NATIVE
+  Audio        audio  = 11;  // если type = AUDIO
+}
+
+// BidResponse — ставка DSP.
+message BidResponse {
+  string bid_id       = 1;
+  string campaign_id  = 2;
+  string creative_id  = 3;
+  string creative_url = 4;
+  string click_url    = 5;
+  int64  price        = 6;
+}
+
+// --- Commit ---
+
+message CommitRequest {
+  string auction_id  = 1;
+  string campaign_id = 2;
+  int64  price       = 3;
+}
+
+message CommitResponse {
+  bool ok = 1;
+}
+
+// --- Rollback ---
+
+message RollbackRequest {
+  string auction_id  = 1;
+  string campaign_id = 2;
+  int64  price       = 3;
+}
+
+message RollbackResponse {
+  bool ok = 1;
+}

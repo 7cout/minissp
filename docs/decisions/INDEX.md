@@ -7,9 +7,9 @@
 | [003](003-mvp-scope.md) | Границы MVP | Принято | 2026-09-25 |
 | [004](004-creative-as-separate-entity.md) | Creative как отдельная сущность | Принято | 2026-09-25 |
 | [005](005-simplified-model-vs-openrtb.md) | Упрощённая модель вместо OpenRTB | Принято | 2026-09-25 |
-| [005](006-three-service-architecture.md) | Трёхсервисная архитектура (SSP + DSP + Publisher) | Принято | 2026-09-25 |
+| [006](006-three-service-architecture.md) | Трёхсервисная архитектура (SSP + DSP + Publisher) | Принято | 2026-10-01 |
 
 ## Связанные разделы
 
-- [Архитектура](../architecture/INDEX.md) 
-- [Заметки](../notes/INDEX.md) 
+- [Архитектура](../architecture/INDEX.md)
+- [Заметки](../notes/INDEX.md)

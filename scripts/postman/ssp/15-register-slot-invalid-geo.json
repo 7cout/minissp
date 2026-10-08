@@ -1,0 +1,10 @@
+{
+  "name": "broken_geo_banner",
+  "geo": "RUSSIA",
+  "min_price": "1000000",
+  "type": "CREATIVE_TYPE_BANNER",
+  "banner": {
+    "width": 320,
+    "height": 50
+  }
+}
