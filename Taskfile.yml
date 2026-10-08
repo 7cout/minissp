@@ -149,6 +149,22 @@ tasks:
     cmds:
       - go run ./cmd/dsp
 
+  run:dsp:postgres:
+    desc: "Запустить DSP с PostgreSQL"
+    dotenv: [deployments/.env]
+    env:
+      STORAGE: postgres
+      DSP_ADDR: '{{.DSP_ADDR | default ":50052"}}'
+      DSP_BID_MULTIPLIER_PERCENT: '{{.DSP_BID_MULTIPLIER_PERCENT | default "150"}}'
+      DSP_API_KEYS: '{{.DSP_API_KEYS}}'
+      POSTGRES_HOST: '{{.POSTGRES_HOST}}'
+      POSTGRES_PORT: '{{.POSTGRES_PORT}}'
+      POSTGRES_USER: '{{.POSTGRES_USER}}'
+      POSTGRES_PASSWORD: '{{.POSTGRES_PASSWORD}}'
+      POSTGRES_DB: '{{.POSTGRES_DB}}'
+    cmds:
+      - go run ./cmd/dsp
+
   # --- Publisher (позже) ---
 
   run:publisher:

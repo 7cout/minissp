@@ -1,8 +1,11 @@
 // Command seed заливает seed-данные в PostgreSQL.
 //
-// Отдельная команда, а не часть запуска SSP: seed — это не схема,
+// Отдельная команда, а не часть запуска сервисов: seed — это не схема,
 // это данные для локальной разработки. Запускается один раз после
 // migrate:up.
+//
+// Заливает оба домена: SSP (publishers, ad_slots) и DSP (advertisers,
+// campaigns, creatives).
 //
 // Пример:
 //
@@ -18,8 +21,10 @@ import (
 	"syscall"
 
 	"github.com/7cout/minissp/internal/db"
+	dspostgres "github.com/7cout/minissp/internal/dsp/repository/postgres"
+	dspseed "github.com/7cout/minissp/internal/dsp/seed"
 	ssppostgres "github.com/7cout/minissp/internal/ssp/repository/postgres"
-	"github.com/7cout/minissp/internal/ssp/seed"
+	sspseed "github.com/7cout/minissp/internal/ssp/seed"
 )
 
 func main() {
@@ -47,14 +52,27 @@ func run() error {
 	}
 	defer pool.Close()
 
-	publishers := ssppostgres.NewPublisherRepo(pool)
-	slots := ssppostgres.NewSlotRepo(pool)
+	// --- SSP ---
 
-	if err := seed.Populate(ctx, publishers, slots); err != nil {
-		return fmt.Errorf("populate: %w", err)
+	sspPublishers := ssppostgres.NewPublisherRepo(pool)
+	sspSlots := ssppostgres.NewSlotRepo(pool)
+
+	if err := sspseed.Populate(ctx, sspPublishers, sspSlots); err != nil {
+		return fmt.Errorf("seed ssp: %w", err)
 	}
+	slog.Info("ssp seed loaded")
 
-	slog.Info("seed data loaded")
+	// --- DSP ---
+
+	dspAdvertisers := dspostgres.NewAdvertiserRepo(pool)
+	dspCampaigns := dspostgres.NewCampaignRepo(pool)
+	dspCreatives := dspostgres.NewCreativeRepo(pool)
+
+	if err := dspseed.Populate(ctx, dspAdvertisers, dspCampaigns, dspCreatives); err != nil {
+		return fmt.Errorf("seed dsp: %w", err)
+	}
+	slog.Info("dsp seed loaded")
+
 	return nil
 }
 
